@@ -76,26 +76,13 @@ class _MyHomePageState extends State<MyHomePage> {
 
   @override
   Widget build(BuildContext context) {
-    final List<Widget> headers = _alarmActive
-        ? const []
-        : [
-            AppBar(
-              title: Text(widget.title),
-              trailing: const [
-                SecondaryBadge(child: Text('Tonight')),
-              ],
-            ),
-            const Divider(),
-          ];
-
     return Scaffold(
       backgroundColor: _pageBackground,
-      headers: headers,
       child: Stack(
         children: [
           Positioned.fill(
             child: SafeArea(
-              top: headers.isEmpty,
+              top: true,
               bottom: true,
               child: Align(
                 alignment: Alignment.topCenter,
@@ -176,6 +163,36 @@ class _MyHomePageState extends State<MyHomePage> {
               ).muted().small(),
             ],
           ),
+          if (!_hasBrushed) ...[
+            const Gap(20),
+            const Text('Verify Brushing').small().semiBold().muted(),
+            const Gap(12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlineButton(
+                onPressed: () => _setView(BrushView.camera),
+                alignment: Alignment.centerLeft,
+                leading: const Icon(LucideIcons.camera),
+                child: const Text('Take a Selfie'),
+              ),
+            ),
+            const Gap(12),
+            SizedBox(
+              width: double.infinity,
+              child: OutlineButton(
+                onPressed: () => _setView(BrushView.nfc),
+                alignment: Alignment.centerLeft,
+                leading: const Icon(LucideIcons.scan),
+                child: const Text('Scan NFC Tag'),
+              ),
+            ),
+            const Gap(8),
+            GhostButton(
+              onPressed: _completeBrushing,
+              size: ButtonSize.small,
+              child: const Text("I don't have my phone (Manual Confirm)"),
+            ),
+          ],
           const Gap(24),
           Card(
             padding: const EdgeInsets.all(16),
@@ -215,36 +232,6 @@ class _MyHomePageState extends State<MyHomePage> {
               ],
             ),
           ),
-          if (!_hasBrushed) ...[
-            const Gap(20),
-            const Text('Verify Brushing').small().semiBold().muted(),
-            const Gap(12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlineButton(
-                onPressed: () => _setView(BrushView.camera),
-                alignment: Alignment.centerLeft,
-                leading: const Icon(LucideIcons.camera),
-                child: const Text('Take a Selfie'),
-              ),
-            ),
-            const Gap(12),
-            SizedBox(
-              width: double.infinity,
-              child: OutlineButton(
-                onPressed: () => _setView(BrushView.nfc),
-                alignment: Alignment.centerLeft,
-                leading: const Icon(LucideIcons.scan),
-                child: const Text('Scan NFC Tag'),
-              ),
-            ),
-            const Gap(8),
-            GhostButton(
-              onPressed: _completeBrushing,
-              size: ButtonSize.small,
-              child: const Text("I don't have my phone (Manual Confirm)"),
-            ),
-          ],
           const Gap(24),
           Card(
             padding: const EdgeInsets.all(16),
