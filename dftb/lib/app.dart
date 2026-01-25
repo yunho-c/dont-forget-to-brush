@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import 'services/settings_store.dart';
 import 'state/app_state.dart';
@@ -36,10 +37,11 @@ class _DftbAppState extends State<DftbApp> {
     return AnimatedBuilder(
       animation: _state,
       builder: (context, _) {
-        return MaterialApp(
+        return shadcn.ShadcnApp(
           debugShowCheckedModeBanner: false,
           title: "Don't Forget to Brush",
-          theme: AppTheme.dark(),
+          theme: AppTheme.shadcnDark(),
+          materialTheme: AppTheme.materialDark(),
           home: AppStateScope(
             notifier: _state,
             child: _state.isReady

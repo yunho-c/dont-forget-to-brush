@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../state/app_state_scope.dart';
 import '../../theme/app_colors.dart';
@@ -21,6 +22,23 @@ class DashboardScreen extends StatelessWidget {
     final completedAt = settings.lastBrushTime != null
         ? DateTime.tryParse(settings.lastBrushTime!)
         : null;
+    final streakBadgeStyle =
+        const shadcn.ButtonStyle.secondary(
+          size: shadcn.ButtonSize.small,
+          density: shadcn.ButtonDensity.dense,
+        ).copyWith(
+          decoration: (context, states, value) {
+            if (value is BoxDecoration) {
+              return value.copyWith(
+                color: AppColors.orange400.withValues(alpha: 0.15),
+                border: Border.all(
+                  color: AppColors.orange400.withValues(alpha: 0.3),
+                ),
+              );
+            }
+            return value;
+          },
+        );
 
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
@@ -51,18 +69,8 @@ class DashboardScreen extends StatelessWidget {
                   ),
                 ],
               ),
-              Container(
-                padding: const EdgeInsets.symmetric(
-                  horizontal: 12,
-                  vertical: 6,
-                ),
-                decoration: BoxDecoration(
-                  color: AppColors.orange400.withValues(alpha: 0.15),
-                  borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: AppColors.orange400.withValues(alpha: 0.3),
-                  ),
-                ),
+              shadcn.SecondaryBadge(
+                style: streakBadgeStyle,
                 child: Row(
                   children: [
                     const Icon(
@@ -132,13 +140,11 @@ class _StatusCard extends StatelessWidget {
         : AppColors.indigo500.withValues(alpha: 0.4);
     final iconColor = isBrushed ? AppColors.green500 : AppColors.indigo500;
 
-    return Container(
+    return shadcn.Card(
       padding: const EdgeInsets.all(24),
-      decoration: BoxDecoration(
-        color: background,
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: border),
-      ),
+      borderRadius: BorderRadius.circular(28),
+      borderColor: border,
+      fillColor: background,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
@@ -158,7 +164,7 @@ class _StatusCard extends StatelessWidget {
           ),
           const SizedBox(height: 16),
           Text(
-            isBrushed ? "You're all set" : 'Haven\'t brushed yet',
+            isBrushed ? "You're all set!" : "Haven't brushed yet",
             style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 8),
@@ -169,14 +175,25 @@ class _StatusCard extends StatelessWidget {
           ),
           const SizedBox(height: 20),
           if (!isBrushed)
-            PrimaryButton(label: 'Brush Now', onPressed: onPrimaryAction)
+            PrimaryButton(label: 'I Brushed', onPressed: onPrimaryAction)
           else
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-              decoration: BoxDecoration(
-                color: AppColors.green500.withValues(alpha: 0.2),
-                borderRadius: BorderRadius.circular(999),
-              ),
+            shadcn.OutlineBadge(
+              style:
+                  const shadcn.ButtonStyle.outline(
+                    size: shadcn.ButtonSize.small,
+                    density: shadcn.ButtonDensity.dense,
+                  ).copyWith(
+                    decoration: (context, states, value) {
+                      if (value is BoxDecoration) {
+                        return value.copyWith(
+                          border: Border.all(
+                            color: AppColors.green500.withValues(alpha: 0.6),
+                          ),
+                        );
+                      }
+                      return value;
+                    },
+                  ),
               child: Text(
                 'Completed at ${_timeLabel(completedAt ?? DateTime.now())}',
                 style: const TextStyle(
@@ -207,13 +224,11 @@ class _BedtimeCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return shadcn.Card(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.night800,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.night700),
-      ),
+      borderRadius: BorderRadius.circular(20),
+      borderColor: AppColors.night700,
+      fillColor: AppColors.night800,
       child: Row(
         children: [
           Container(
@@ -247,10 +262,13 @@ class _BedtimeCard extends StatelessWidget {
               ],
             ),
           ),
-          Switch(
+          shadcn.Switch(
             value: isActive,
             onChanged: onToggle,
-            activeThumbColor: AppColors.indigo500,
+            activeColor: AppColors.indigo500,
+            activeThumbColor: AppColors.slate200,
+            inactiveColor: AppColors.night700,
+            inactiveThumbColor: AppColors.slate400,
           ),
         ],
       ),
@@ -265,13 +283,11 @@ class _ReminderCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return shadcn.Card(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.night800.withValues(alpha: 0.7),
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.night700),
-      ),
+      borderRadius: BorderRadius.circular(18),
+      borderColor: AppColors.night700,
+      fillColor: AppColors.night800.withValues(alpha: 0.7),
       child: Row(
         children: [
           Container(
@@ -302,7 +318,7 @@ class _ReminderCard extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  time,
+                  _formatTime(time),
                   style: const TextStyle(
                     color: AppColors.slate400,
                     fontSize: 12,
@@ -315,5 +331,16 @@ class _ReminderCard extends StatelessWidget {
         ],
       ),
     );
+  }
+
+  String _formatTime(String raw) {
+    final parts = raw.split(':');
+    if (parts.length != 2) return raw;
+    final hour = int.tryParse(parts[0]);
+    final minute = int.tryParse(parts[1]);
+    if (hour == null || minute == null) return raw;
+    final displayHour = hour % 12 == 0 ? 12 : hour % 12;
+    final suffix = hour >= 12 ? 'PM' : 'AM';
+    return '$displayHour:${minute.toString().padLeft(2, '0')} $suffix';
   }
 }

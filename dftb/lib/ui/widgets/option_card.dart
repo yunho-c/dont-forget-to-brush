@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../theme/app_colors.dart';
 
@@ -23,56 +24,53 @@ class OptionCard extends StatelessWidget {
     return InkWell(
       onTap: onTap,
       borderRadius: BorderRadius.circular(16),
-      child: Ink(
-        decoration: BoxDecoration(
-          color: isSelected
-              ? AppColors.indigo500.withValues(alpha: 0.12)
-              : AppColors.night800,
-          borderRadius: BorderRadius.circular(16),
-          border: Border.all(
-            color: isSelected ? AppColors.indigo500 : AppColors.night700,
-          ),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(16),
-          child: Row(
-            children: [
-              Container(
-                height: 40,
-                width: 40,
-                decoration: BoxDecoration(
-                  color: AppColors.night900,
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Icon(
-                  icon,
-                  color: isSelected ? AppColors.indigo500 : AppColors.slate400,
-                ),
+      child: shadcn.Card(
+        padding: const EdgeInsets.all(16),
+        borderRadius: BorderRadius.circular(16),
+        borderColor: isSelected ? AppColors.indigo500 : AppColors.night700,
+        fillColor: isSelected
+            ? AppColors.indigo500.withValues(alpha: 0.12)
+            : AppColors.night800,
+        child: Row(
+          children: [
+            Container(
+              height: 40,
+              width: 40,
+              decoration: BoxDecoration(
+                color: AppColors.night900,
+                borderRadius: BorderRadius.circular(12),
               ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      title,
-                      style: TextStyle(
-                        color: Colors.white,
-                        fontWeight: FontWeight.w600,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      subtitle,
-                      style: TextStyle(color: AppColors.slate400, fontSize: 12),
-                    ),
-                  ],
-                ),
+              child: Icon(
+                icon,
+                color: isSelected ? AppColors.indigo500 : AppColors.slate400,
               ),
-              if (isSelected)
-                const Icon(Icons.check_circle, color: AppColors.indigo500),
-            ],
-          ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: const TextStyle(
+                      color: AppColors.slate400,
+                      fontSize: 12,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isSelected)
+              const Icon(Icons.check_circle, color: AppColors.indigo500),
+          ],
         ),
       ),
     );

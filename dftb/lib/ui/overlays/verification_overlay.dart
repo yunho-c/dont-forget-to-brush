@@ -1,10 +1,10 @@
 import 'dart:async';
 
 import 'package:flutter/material.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../models/verification_method.dart';
 import '../../theme/app_colors.dart';
-import '../widgets/app_buttons.dart';
 
 enum _OverlayStep { alarm, verify, success }
 
@@ -207,14 +207,18 @@ class _VerificationOverlayState extends State<VerificationOverlay>
 
     if (_step == _OverlayStep.alarm) {
       return Center(
-        child: PrimaryButton(
-          label: "I'm Up, Let's Brush",
+        child: shadcn.Button.primary(
+          style: const shadcn.ButtonStyle.primary(
+            size: shadcn.ButtonSize.large,
+            density: shadcn.ButtonDensity.comfortable,
+          ),
           onPressed: () {
             setState(() {
               _step = _OverlayStep.verify;
             });
             _startAutoScanIfNeeded();
           },
+          child: const Text("I'm Up, Let's Brush"),
         ),
       );
     }
@@ -278,9 +282,13 @@ class _VerificationOverlayState extends State<VerificationOverlay>
             const SizedBox(height: 16),
             const Text('Scanning for tag...'),
             const SizedBox(height: 20),
-            GhostButton(
-              label: '(Simulate Tap)',
+            shadcn.Button.ghost(
               onPressed: _completeVerification,
+              style: const shadcn.ButtonStyle.ghost(
+                size: shadcn.ButtonSize.small,
+                density: shadcn.ButtonDensity.compact,
+              ),
+              child: const Text('(Simulate Tap)'),
             ),
           ],
         );
@@ -324,9 +332,13 @@ class _VerificationOverlayState extends State<VerificationOverlay>
               ),
             ),
             const SizedBox(height: 20),
-            PrimaryButton(
-              label: 'Take Photo',
+            shadcn.Button.primary(
+              style: const shadcn.ButtonStyle.primary(
+                size: shadcn.ButtonSize.normal,
+                density: shadcn.ButtonDensity.comfortable,
+              ),
               onPressed: _completeVerification,
+              child: const Text('Take Photo'),
             ),
           ],
         );
@@ -341,22 +353,25 @@ class _VerificationOverlayState extends State<VerificationOverlay>
     if (_step == _OverlayStep.verify && widget.isAlarmMode) {
       return Column(
         children: [
-          GhostButton(
-            label: 'Cancel',
+          shadcn.Button.ghost(
             onPressed: () {
               setState(() {
                 _step = _OverlayStep.alarm;
               });
             },
+            child: const Text('Cancel'),
           ),
-          GhostButton(
-            label: 'Skip / Emergency Dismiss',
+          shadcn.Button.ghost(
             onPressed: widget.onDismiss,
+            child: const Text('Skip / Emergency Dismiss'),
           ),
         ],
       );
     }
 
-    return GhostButton(label: 'Skip for now', onPressed: widget.onDismiss);
+    return shadcn.Button.ghost(
+      onPressed: widget.onDismiss,
+      child: const Text('Skip for now'),
+    );
   }
 }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../theme/app_colors.dart';
 
@@ -18,22 +19,20 @@ class PrimaryButton extends StatelessWidget {
   Widget build(BuildContext context) {
     return SizedBox(
       width: double.infinity,
-      child: ElevatedButton(
-        style: ElevatedButton.styleFrom(
-          backgroundColor: AppColors.indigo500,
-          foregroundColor: Colors.white,
-          padding: const EdgeInsets.symmetric(vertical: 16),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(18),
-          ),
-          elevation: 0,
-        ),
+      child: shadcn.Button.primary(
         onPressed: onPressed,
+        style: const shadcn.ButtonStyle.primary(
+          size: shadcn.ButtonSize.large,
+          density: shadcn.ButtonDensity.comfortable,
+        ),
         child: isLoading
             ? const SizedBox(
-                height: 20,
-                width: 20,
-                child: CircularProgressIndicator(strokeWidth: 2),
+                height: 18,
+                width: 18,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: AppColors.slate200,
+                ),
               )
             : Text(
                 label,
@@ -55,12 +54,19 @@ class GhostButton extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return TextButton(
+    return shadcn.Button.ghost(
       onPressed: onPressed,
-      style: TextButton.styleFrom(foregroundColor: AppColors.slate400),
+      style: const shadcn.ButtonStyle.ghost(
+        size: shadcn.ButtonSize.small,
+        density: shadcn.ButtonDensity.compact,
+      ),
       child: Text(
         label,
-        style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w500),
+        style: const TextStyle(
+          fontSize: 12,
+          fontWeight: FontWeight.w500,
+          color: AppColors.slate400,
+        ),
       ),
     );
   }

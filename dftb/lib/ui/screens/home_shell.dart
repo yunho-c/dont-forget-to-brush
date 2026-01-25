@@ -24,7 +24,6 @@ class _HomeShellState extends State<HomeShell> {
 
     return Scaffold(
       body: AppBackground(
-        showLine: _tabIndex == 0,
         child: Stack(
           children: [
             SafeArea(

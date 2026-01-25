@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../models/app_mode.dart';
 import '../../models/verification_method.dart';
@@ -148,10 +149,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
           style: TextStyle(color: AppColors.slate400),
         ),
         const SizedBox(height: 24),
-        TextField(
-          controller: _nameController,
-          decoration: const InputDecoration(hintText: 'Your name'),
-        ),
+        shadcn.TextField(controller: _nameController, hintText: 'Your name'),
       ],
     );
   }
@@ -174,13 +172,11 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         InkWell(
           onTap: _pickTime,
           borderRadius: BorderRadius.circular(16),
-          child: Ink(
+          child: shadcn.Card(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.night800,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: AppColors.night700),
-            ),
+            borderRadius: BorderRadius.circular(16),
+            borderColor: AppColors.night700,
+            fillColor: AppColors.night800,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [

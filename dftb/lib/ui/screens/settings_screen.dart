@@ -1,10 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../models/app_mode.dart';
 import '../../models/verification_method.dart';
 import '../../state/app_state_scope.dart';
 import '../../theme/app_colors.dart';
-import '../widgets/app_buttons.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
@@ -117,13 +117,20 @@ class SettingsScreen extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 20),
-          PrimaryButton(
-            label: 'Reset App State (Prototype Only)',
+          shadcn.Button.destructive(
             onPressed: state.reset,
+            child: const Text('Reset App State (Prototype Only)'),
           ),
           const SizedBox(height: 8),
           Center(
-            child: GhostButton(label: 'Test Alarm', onPressed: state.openAlarm),
+            child: shadcn.Button.ghost(
+              onPressed: state.openAlarm,
+              style: const shadcn.ButtonStyle.ghost(
+                size: shadcn.ButtonSize.small,
+                density: shadcn.ButtonDensity.compact,
+              ),
+              child: const Text('Test Alarm'),
+            ),
           ),
         ],
       ),
@@ -164,12 +171,10 @@ class _SettingsCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: BoxDecoration(
-        color: AppColors.night800,
-        borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: AppColors.night700),
-      ),
+    return shadcn.Card(
+      borderRadius: BorderRadius.circular(18),
+      borderColor: AppColors.night700,
+      fillColor: AppColors.night800,
       child: Column(children: children),
     );
   }

@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../theme/app_colors.dart';
 import '../data/mock_data.dart';
@@ -18,13 +19,11 @@ class InsightsScreen extends StatelessWidget {
             style: TextStyle(fontSize: 28, fontWeight: FontWeight.w700),
           ),
           const SizedBox(height: 20),
-          Container(
+          shadcn.Card(
             padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: AppColors.night800,
-              borderRadius: BorderRadius.circular(24),
-              border: Border.all(color: AppColors.night700),
-            ),
+            borderRadius: BorderRadius.circular(24),
+            borderColor: AppColors.night700,
+            fillColor: AppColors.night800,
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
@@ -149,13 +148,11 @@ class _StatCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
+    return shadcn.Card(
       padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: AppColors.night800,
-        borderRadius: BorderRadius.circular(20),
-        border: Border.all(color: AppColors.night700),
-      ),
+      borderRadius: BorderRadius.circular(20),
+      borderColor: AppColors.night700,
+      fillColor: AppColors.night800,
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [

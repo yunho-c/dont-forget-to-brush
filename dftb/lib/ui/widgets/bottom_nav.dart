@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../theme/app_colors.dart';
 
@@ -10,36 +11,39 @@ class BottomNav extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
-      decoration: BoxDecoration(
-        color: AppColors.night900.withValues(alpha: 0.9),
-        border: const Border(top: BorderSide(color: AppColors.night700)),
-      ),
-      child: SafeArea(
-        top: false,
-        child: Row(
-          mainAxisAlignment: MainAxisAlignment.spaceAround,
-          children: [
-            _NavItem(
-              label: 'Tonight',
-              icon: Icons.home_rounded,
-              isActive: currentIndex == 0,
-              onTap: () => onTap(0),
-            ),
-            _NavItem(
-              label: 'Insights',
-              icon: Icons.bar_chart_rounded,
-              isActive: currentIndex == 1,
-              onTap: () => onTap(1),
-            ),
-            _NavItem(
-              label: 'Settings',
-              icon: Icons.settings_rounded,
-              isActive: currentIndex == 2,
-              onTap: () => onTap(2),
-            ),
-          ],
+    return shadcn.SurfaceBlur(
+      surfaceBlur: 18,
+      child: Container(
+        padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+        decoration: BoxDecoration(
+          color: AppColors.night900.withValues(alpha: 0.9),
+          border: const Border(top: BorderSide(color: AppColors.night700)),
+        ),
+        child: SafeArea(
+          top: false,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceAround,
+            children: [
+              _NavItem(
+                label: 'Tonight',
+                icon: Icons.home_rounded,
+                isActive: currentIndex == 0,
+                onTap: () => onTap(0),
+              ),
+              _NavItem(
+                label: 'Insights',
+                icon: Icons.bar_chart_rounded,
+                isActive: currentIndex == 1,
+                onTap: () => onTap(1),
+              ),
+              _NavItem(
+                label: 'Settings',
+                icon: Icons.settings_rounded,
+                isActive: currentIndex == 2,
+                onTap: () => onTap(2),
+              ),
+            ],
+          ),
         ),
       ),
     );
@@ -61,11 +65,19 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return GestureDetector(
-      onTap: onTap,
-      behavior: HitTestBehavior.opaque,
-      child: SizedBox(
-        width: 72,
+    return SizedBox(
+      width: 72,
+      child: shadcn.SelectedButton(
+        value: isActive,
+        onChanged: (_) => onTap(),
+        style: const shadcn.ButtonStyle.ghost(
+          size: shadcn.ButtonSize.small,
+          density: shadcn.ButtonDensity.iconComfortable,
+        ),
+        selectedStyle: const shadcn.ButtonStyle.secondary(
+          size: shadcn.ButtonSize.small,
+          density: shadcn.ButtonDensity.iconComfortable,
+        ),
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
