@@ -1,0 +1,6 @@
+[submodule "reference/dftb-mockup-1"]
+	path = reference/dftb-mockup-1
+	url = https://github.com/yunho-c/dftb-mockup-1
+[submodule "reference/dftb-mockup-2"]
+	path = reference/dftb-mockup-2
+	url = https://github.com/yunho-c/dftb-mockup-2
