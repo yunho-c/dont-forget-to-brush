@@ -7,7 +7,9 @@ This document captures the concrete work needed to ship a production-grade app.
 ## 1) Product & UX
 - [x] Finalize requirements for onboarding, habit rules, and success/late definitions.
 - [ ] Create full state designs: permissions denied, no-network, empty history, error states.
-- [ ] Define copy and microcopy for reminders, alarms, and verification.
+- [ ] Define copy and microcopy:
+  - [x] Reminders + alarms.
+  - [ ] Verification + failure states.
 
 ---
 
@@ -23,7 +25,8 @@ This document captures the concrete work needed to ship a production-grade app.
 
 ## 3) Platform Integration
 - [ ] Local notifications:
-  - [ ] iOS critical alerts + Android channels.
+  - [x] Android notification channels.
+  - [x] iOS/macOS time-sensitive capability + payloads.
   - [x] Permission request flows.
 - [ ] Background execution:
   - [ ] iOS background tasks, Android foreground services as needed.

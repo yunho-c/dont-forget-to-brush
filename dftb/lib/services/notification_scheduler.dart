@@ -138,10 +138,16 @@ class NotificationScheduler {
     for (int i = 0; i < reminderTimes.length; i += 1) {
       final scheduled = reminderTimes[i];
       if (scheduled.isBefore(now)) continue;
+      final copy = _reminderCopy(
+        mode: settings.mode,
+        index: i,
+        total: reminderTimes.length,
+        sleepModeActive: sleepModeActive,
+      );
       await _plugin.zonedSchedule(
         id: 1000 + i,
-        title: 'Brush reminder',
-        body: 'Time to brush before bed.',
+        title: copy.title,
+        body: copy.body,
         scheduledDate: scheduled,
         notificationDetails: _reminderDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -156,10 +162,11 @@ class NotificationScheduler {
       now: now,
     );
     if (alarmTime != null && alarmTime.isAfter(now)) {
+      final copy = _alarmCopy(settings.mode);
       await _plugin.zonedSchedule(
         id: 2000,
-        title: 'Brush alarm',
-        body: 'Verification required to end the alarm.',
+        title: copy.title,
+        body: copy.body,
         scheduledDate: alarmTime,
         notificationDetails: _alarmDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
@@ -263,7 +270,14 @@ class NotificationScheduler {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
     );
-    const darwin = DarwinNotificationDetails(
+    const ios = DarwinNotificationDetails(
+      presentAlert: true,
+      presentSound: true,
+      presentBadge: false,
+      presentBanner: true,
+      presentList: true,
+    );
+    const macos = DarwinNotificationDetails(
       presentAlert: true,
       presentSound: true,
       presentBadge: false,
@@ -272,8 +286,8 @@ class NotificationScheduler {
     );
     return const NotificationDetails(
       android: android,
-      iOS: darwin,
-      macOS: darwin,
+      iOS: ios,
+      macOS: macos,
     );
   }
 
@@ -287,17 +301,26 @@ class NotificationScheduler {
       category: AndroidNotificationCategory.alarm,
       fullScreenIntent: true,
     );
-    const darwin = DarwinNotificationDetails(
+    const ios = DarwinNotificationDetails(
       presentAlert: true,
       presentSound: true,
       presentBadge: false,
       presentBanner: true,
       presentList: true,
+      interruptionLevel: InterruptionLevel.timeSensitive,
+    );
+    const macos = DarwinNotificationDetails(
+      presentAlert: true,
+      presentSound: true,
+      presentBadge: false,
+      presentBanner: true,
+      presentList: true,
+      interruptionLevel: InterruptionLevel.timeSensitive,
     );
     return const NotificationDetails(
       android: android,
-      iOS: darwin,
-      macOS: darwin,
+      iOS: ios,
+      macOS: macos,
     );
   }
 
@@ -314,14 +337,98 @@ class NotificationScheduler {
         .resolvePlatformSpecificImplementation<
           IOSFlutterLocalNotificationsPlugin
         >();
-    await ios?.requestPermissions(alert: true, badge: true, sound: true);
+    await ios?.requestPermissions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
 
     final macos = _plugin
         .resolvePlatformSpecificImplementation<
           MacOSFlutterLocalNotificationsPlugin
         >();
-    await macos?.requestPermissions(alert: true, badge: true, sound: true);
+    await macos?.requestPermissions(
+      alert: true,
+      badge: true,
+      sound: true,
+    );
   }
+
+  _NotificationCopy _reminderCopy({
+    required AppMode mode,
+    required int index,
+    required int total,
+    required bool sleepModeActive,
+  }) {
+    switch (mode) {
+      case AppMode.gentle:
+        if (sleepModeActive || total == 1) {
+          return const _NotificationCopy(
+            'Quick reminder',
+            'You still have time tonight.',
+          );
+        }
+        if (index == 0) {
+          return const _NotificationCopy(
+            'Brush now',
+            "Take 90 seconds and you're done for the night.",
+          );
+        }
+        if (index == 1) {
+          return const _NotificationCopy(
+            'Quick reminder',
+            'You still have time tonight.',
+          );
+        }
+        return const _NotificationCopy(
+          'Last nudge',
+          'One quick brush and you can fully relax.',
+        );
+      case AppMode.accountability:
+        if (index == 0) {
+          return const _NotificationCopy(
+            'Brush now',
+            'Keep the streak going tonight.',
+          );
+        }
+        return const _NotificationCopy(
+          'Still time',
+          'Brush before the night is over.',
+        );
+      case AppMode.noExcuses:
+        return const _NotificationCopy(
+          'Do it now',
+          'This is the only chance tonight.',
+        );
+    }
+  }
+
+  _NotificationCopy _alarmCopy(AppMode mode) {
+    switch (mode) {
+      case AppMode.gentle:
+        return const _NotificationCopy(
+          'Brush now',
+          'Brush to silence this.',
+        );
+      case AppMode.accountability:
+        return const _NotificationCopy(
+          'Brush required',
+          'Brush to silence this.',
+        );
+      case AppMode.noExcuses:
+        return const _NotificationCopy(
+          'Brush now',
+          'Brush to silence this.',
+        );
+    }
+  }
+}
+
+class _NotificationCopy {
+  const _NotificationCopy(this.title, this.body);
+
+  final String title;
+  final String body;
 }
 
 class _BedtimeWindow {
