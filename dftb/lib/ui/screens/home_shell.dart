@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../state/app_state_scope.dart';
+import '../../state/app_state_provider.dart';
 import '../overlays/verification_overlay.dart';
 import '../widgets/app_background.dart';
 import '../widgets/bottom_nav.dart';
@@ -8,19 +9,19 @@ import 'dashboard_screen.dart';
 import 'insights_screen.dart';
 import 'settings_screen.dart';
 
-class HomeShell extends StatefulWidget {
+class HomeShell extends ConsumerStatefulWidget {
   const HomeShell({super.key});
 
   @override
-  State<HomeShell> createState() => _HomeShellState();
+  ConsumerState<HomeShell> createState() => _HomeShellState();
 }
 
-class _HomeShellState extends State<HomeShell> {
+class _HomeShellState extends ConsumerState<HomeShell> {
   int _tabIndex = 0;
 
   @override
   Widget build(BuildContext context) {
-    final state = AppStateScope.of(context);
+    final state = ref.watch(appStateProvider);
 
     return Scaffold(
       body: AppBackground(

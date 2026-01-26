@@ -1,17 +1,18 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
-import '../../state/app_state_scope.dart';
+import '../../state/app_state_provider.dart';
 import '../../theme/app_colors.dart';
 import '../data/mock_data.dart';
 import '../widgets/app_buttons.dart';
 
-class DashboardScreen extends StatelessWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    final state = AppStateScope.of(context);
+  Widget build(BuildContext context, WidgetRef ref) {
+    final state = ref.watch(appStateProvider);
     final settings = state.settings;
     final isBrushed = state.isBrushedTonight;
     final dateLabel = MaterialLocalizations.of(

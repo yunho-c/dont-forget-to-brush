@@ -1,23 +1,24 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../models/app_mode.dart';
 import '../../models/verification_method.dart';
-import '../../state/app_state_scope.dart';
+import '../../state/app_state_provider.dart';
 import '../../theme/app_colors.dart';
 import '../widgets/app_background.dart';
 import '../widgets/app_buttons.dart';
 import '../widgets/option_card.dart';
 import '../widgets/step_indicator.dart';
 
-class OnboardingScreen extends StatefulWidget {
+class OnboardingScreen extends ConsumerStatefulWidget {
   const OnboardingScreen({super.key});
 
   @override
-  State<OnboardingScreen> createState() => _OnboardingScreenState();
+  ConsumerState<OnboardingScreen> createState() => _OnboardingScreenState();
 }
 
-class _OnboardingScreenState extends State<OnboardingScreen> {
+class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
   static const int _totalSteps = 4;
 
   int _step = 1;
@@ -41,13 +42,14 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
         _step += 1;
       });
     } else {
-      final state = AppStateScope.of(context);
-      state.completeOnboarding(
-        name: _nameController.text.trim(),
-        bedtimeStart: _bedtimeController.text,
-        mode: _mode,
-        method: _method,
-      );
+      ref
+          .read(appStateProvider)
+          .completeOnboarding(
+            name: _nameController.text.trim(),
+            bedtimeStart: _bedtimeController.text,
+            mode: _mode,
+            method: _method,
+          );
     }
   }
 
