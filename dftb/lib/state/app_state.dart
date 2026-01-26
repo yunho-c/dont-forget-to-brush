@@ -36,6 +36,7 @@ class AppState extends ChangeNotifier {
   Future<void> load() async {
     _settings = await _store.loadSettings();
     _isDeveloperMode = await _store.loadDeveloperMode();
+    await _scheduler.initialize(onNotificationTap: _handleNotificationTap);
     _isReady = true;
     await _refreshSchedule();
     notifyListeners();
@@ -167,6 +168,14 @@ class AppState extends ChangeNotifier {
     _isDeveloperMode = !_isDeveloperMode;
     _store.saveDeveloperMode(_isDeveloperMode);
     notifyListeners();
+  }
+
+  void _handleNotificationTap(String? payload) {
+    if (payload == 'alarm') {
+      openAlarm();
+      return;
+    }
+    openVerification();
   }
 
   void _persist() {

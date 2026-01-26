@@ -8,12 +8,14 @@ import 'package:timezone/timezone.dart' as tz;
 import '../models/app_mode.dart';
 import '../models/user_settings.dart';
 
+typedef NotificationTapHandler = void Function(String? payload);
+
 class NotificationScheduler {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
 
-  Future<void> initialize() async {
+  Future<void> initialize({NotificationTapHandler? onNotificationTap}) async {
     if (_initialized) return;
     tz.initializeTimeZones();
     final timezone = await FlutterTimezone.getLocalTimezone();
@@ -29,7 +31,13 @@ class NotificationScheduler {
       iOS: iosSettings,
       macOS: macosSettings,
     );
-    await _plugin.initialize(settings: initSettings);
+    await _plugin.initialize(
+      settings: initSettings,
+      onDidReceiveNotificationResponse: (response) {
+        onNotificationTap?.call(response.payload);
+      },
+    );
+    await _requestPermissions();
     _initialized = true;
   }
 
@@ -66,6 +74,7 @@ class NotificationScheduler {
         scheduledDate: scheduled,
         notificationDetails: _reminderDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: 'reminder',
       );
     }
 
@@ -83,6 +92,7 @@ class NotificationScheduler {
         scheduledDate: alarmTime,
         notificationDetails: _alarmDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        payload: 'alarm',
       );
     }
   }
@@ -201,6 +211,28 @@ class NotificationScheduler {
       presentSound: true,
     );
     return const NotificationDetails(android: android, iOS: ios);
+  }
+
+  Future<void> _requestPermissions() async {
+    final android = _plugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >();
+    await android?.requestNotificationsPermission();
+    await android?.requestExactAlarmsPermission();
+    await android?.requestFullScreenIntentPermission();
+
+    final ios = _plugin
+        .resolvePlatformSpecificImplementation<
+          IOSFlutterLocalNotificationsPlugin
+        >();
+    await ios?.requestPermissions(alert: true, badge: true, sound: true);
+
+    final macos = _plugin
+        .resolvePlatformSpecificImplementation<
+          MacOSFlutterLocalNotificationsPlugin
+        >();
+    await macos?.requestPermissions(alert: true, badge: true, sound: true);
   }
 }
 

@@ -1,5 +1,3 @@
-import 'dart:async';
-
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_riverpod/legacy.dart';
 
@@ -23,9 +21,7 @@ final sessionRepositoryProvider = Provider<SessionRepository>((ref) {
 });
 
 final notificationSchedulerProvider = Provider<NotificationScheduler>((ref) {
-  final scheduler = NotificationScheduler();
-  unawaited(scheduler.initialize());
-  return scheduler;
+  return NotificationScheduler();
 });
 
 final appStateProvider = ChangeNotifierProvider<AppState>((ref) {

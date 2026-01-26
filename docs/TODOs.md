@@ -24,7 +24,7 @@ This document captures the concrete work needed to ship a production-grade app.
 ## 3) Platform Integration
 - [ ] Local notifications:
   - [ ] iOS critical alerts + Android channels.
-  - [ ] Permission request flows.
+  - [x] Permission request flows.
 - [ ] Background execution:
   - [ ] iOS background tasks, Android foreground services as needed.
 - [ ] Device integrations:
