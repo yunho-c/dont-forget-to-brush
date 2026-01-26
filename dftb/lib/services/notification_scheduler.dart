@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
@@ -24,8 +25,26 @@ class NotificationScheduler {
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
-    const iosSettings = DarwinInitializationSettings();
-    const macosSettings = DarwinInitializationSettings();
+    const iosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestSoundPermission: true,
+      requestBadgePermission: true,
+      defaultPresentAlert: true,
+      defaultPresentSound: true,
+      defaultPresentBadge: true,
+      defaultPresentBanner: true,
+      defaultPresentList: true,
+    );
+    const macosSettings = DarwinInitializationSettings(
+      requestAlertPermission: true,
+      requestSoundPermission: true,
+      requestBadgePermission: true,
+      defaultPresentAlert: true,
+      defaultPresentSound: true,
+      defaultPresentBadge: true,
+      defaultPresentBanner: true,
+      defaultPresentList: true,
+    );
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
@@ -44,6 +63,58 @@ class NotificationScheduler {
   Future<void> cancelAll() async {
     if (!_initialized) return;
     await _plugin.cancelAll();
+  }
+
+  Future<void> scheduleTestReminder({
+    Duration delay = const Duration(seconds: 10),
+  }) async {
+    await initialize();
+    final scheduled = tz.TZDateTime.now(tz.local).add(delay);
+    await _plugin.zonedSchedule(
+      id: 9001,
+      title: 'Test reminder',
+      body: 'This is a test reminder.',
+      scheduledDate: scheduled,
+      notificationDetails: _reminderDetails(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: 'reminder',
+    );
+  }
+
+  Future<void> scheduleTestAlarm({
+    Duration delay = const Duration(seconds: 15),
+  }) async {
+    await initialize();
+    final scheduled = tz.TZDateTime.now(tz.local).add(delay);
+    await _plugin.zonedSchedule(
+      id: 9002,
+      title: 'Test alarm',
+      body: 'This is a test alarm.',
+      scheduledDate: scheduled,
+      notificationDetails: _alarmDetails(),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: 'alarm',
+    );
+  }
+
+  Future<void> showTestNotification() async {
+    await initialize();
+    await _plugin.show(
+      id: 9003,
+      title: 'Test notification',
+      body: 'If you see this, delivery works.',
+      notificationDetails: _reminderDetails(),
+      payload: 'reminder',
+    );
+  }
+
+  Future<void> logPendingNotifications() async {
+    await initialize();
+    final pending = await _plugin.pendingNotificationRequests();
+    debugPrint(
+      '[Notifications] Pending requests: ${pending.length} -> '
+      '${pending.map((e) => e.id).toList()}',
+    );
   }
 
   Future<void> scheduleForSettings({
@@ -192,8 +263,18 @@ class NotificationScheduler {
       importance: Importance.defaultImportance,
       priority: Priority.defaultPriority,
     );
-    const ios = DarwinNotificationDetails();
-    return const NotificationDetails(android: android, iOS: ios);
+    const darwin = DarwinNotificationDetails(
+      presentAlert: true,
+      presentSound: true,
+      presentBadge: false,
+      presentBanner: true,
+      presentList: true,
+    );
+    return const NotificationDetails(
+      android: android,
+      iOS: darwin,
+      macOS: darwin,
+    );
   }
 
   NotificationDetails _alarmDetails() {
@@ -206,11 +287,18 @@ class NotificationScheduler {
       category: AndroidNotificationCategory.alarm,
       fullScreenIntent: true,
     );
-    const ios = DarwinNotificationDetails(
+    const darwin = DarwinNotificationDetails(
       presentAlert: true,
       presentSound: true,
+      presentBadge: false,
+      presentBanner: true,
+      presentList: true,
     );
-    return const NotificationDetails(android: android, iOS: ios);
+    return const NotificationDetails(
+      android: android,
+      iOS: darwin,
+      macOS: darwin,
+    );
   }
 
   Future<void> _requestPermissions() async {

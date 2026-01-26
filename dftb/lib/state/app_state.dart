@@ -170,6 +170,26 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> scheduleTestReminder() async {
+    await _scheduler.scheduleTestReminder();
+  }
+
+  Future<void> scheduleTestAlarm() async {
+    await _scheduler.scheduleTestAlarm();
+  }
+
+  Future<void> showTestNotification() async {
+    await _scheduler.showTestNotification();
+  }
+
+  Future<void> logPendingNotifications() async {
+    await _scheduler.logPendingNotifications();
+  }
+
+  Future<void> cancelAllNotifications() async {
+    await _scheduler.cancelAll();
+  }
+
   void _handleNotificationTap(String? payload) {
     if (payload == 'alarm') {
       openAlarm();
