@@ -54,15 +54,29 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
   Future<void> _pickTime() async {
     final current =
         _parseTime(_bedtimeController.text) ??
-        const TimeOfDay(hour: 22, minute: 0);
-    final picked = await showTimePicker(
+        const shadcn.TimeOfDay(hour: 22, minute: 0);
+    shadcn.TimeOfDay? stagedValue = current;
+    final picked = await shadcn.showDialog<shadcn.TimeOfDay>(
       context: context,
-      initialTime: current,
-      builder: (context, child) {
-        final media = MediaQuery.of(context);
-        return MediaQuery(
-          data: media.copyWith(alwaysUse24HourFormat: true),
-          child: child ?? const SizedBox.shrink(),
+      barrierColor: Colors.black.withValues(alpha: 0.7),
+      builder: (context) {
+        return shadcn.AlertDialog(
+          title: const Text('Set Bedtime'),
+          content: shadcn.TimePickerDialog(
+            initialValue: current,
+            use24HourFormat: true,
+            onChanged: (value) => stagedValue = value,
+          ),
+          actions: [
+            shadcn.Button.ghost(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            shadcn.Button.primary(
+              onPressed: () => Navigator.of(context).pop(stagedValue),
+              child: const Text('Set'),
+            ),
+          ],
         );
       },
     );
@@ -73,16 +87,16 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     }
   }
 
-  TimeOfDay? _parseTime(String input) {
+  shadcn.TimeOfDay? _parseTime(String input) {
     final parts = input.split(':');
     if (parts.length != 2) return null;
     final hour = int.tryParse(parts[0]);
     final minute = int.tryParse(parts[1]);
     if (hour == null || minute == null) return null;
-    return TimeOfDay(hour: hour, minute: minute);
+    return shadcn.TimeOfDay(hour: hour, minute: minute);
   }
 
-  String _formatTime(TimeOfDay time) {
+  String _formatTime(shadcn.TimeOfDay time) {
     final h = time.hour.toString().padLeft(2, '0');
     final m = time.minute.toString().padLeft(2, '0');
     return '$h:$m';

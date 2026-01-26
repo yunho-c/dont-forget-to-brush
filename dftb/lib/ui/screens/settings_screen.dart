@@ -82,7 +82,7 @@ class SettingsScreen extends StatelessWidget {
               _SettingsRow(
                 icon: Icons.shield_outlined,
                 label: 'Mode',
-                trailing: _Dropdown<AppMode>(
+                trailing: _SelectField<AppMode>(
                   value: settings.mode,
                   items: AppMode.values,
                   labelBuilder: (mode) => mode.label,
@@ -103,7 +103,7 @@ class SettingsScreen extends StatelessWidget {
               _SettingsRow(
                 icon: Icons.lock_outline,
                 label: 'Method',
-                trailing: _Dropdown<VerificationMethod>(
+                trailing: _SelectField<VerificationMethod>(
                   value: settings.verificationMethod,
                   items: VerificationMethod.values,
                   labelBuilder: (method) => method.label,
@@ -222,8 +222,8 @@ class _SettingsRow extends StatelessWidget {
   }
 }
 
-class _Dropdown<T> extends StatelessWidget {
-  const _Dropdown({
+class _SelectField<T> extends StatelessWidget {
+  const _SelectField({
     required this.value,
     required this.items,
     required this.labelBuilder,
@@ -237,23 +237,42 @@ class _Dropdown<T> extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return DropdownButton<T>(
+    return shadcn.Select<T>(
       value: value,
-      onChanged: onChanged,
-      dropdownColor: AppColors.night800,
-      underline: const SizedBox.shrink(),
-      iconEnabledColor: AppColors.slate400,
-      items: items
-          .map(
-            (item) => DropdownMenuItem(
-              value: item,
-              child: Text(
-                labelBuilder(item),
-                style: const TextStyle(color: Colors.white),
-              ),
-            ),
-          )
-          .toList(),
+      onChanged: (value) => onChanged(value),
+      filled: true,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      borderRadius: BorderRadius.circular(12),
+      popupConstraints: const BoxConstraints(minWidth: 140),
+      popup: (context) => shadcn.SelectPopup(
+        items: shadcn.SelectItemList(
+          children: items
+              .map(
+                (item) => shadcn.SelectItem(
+                  value: item,
+                  builder: (context) => Padding(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 12,
+                      vertical: 8,
+                    ),
+                    child: Text(
+                      labelBuilder(item),
+                      style: const TextStyle(color: Colors.white),
+                    ),
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+      ),
+      itemBuilder: (context, item) => Text(
+        labelBuilder(item),
+        style: const TextStyle(
+          color: AppColors.slate300,
+          fontSize: 12,
+          fontWeight: FontWeight.w600,
+        ),
+      ),
     );
   }
 }
