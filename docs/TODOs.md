@@ -5,7 +5,7 @@ This document captures the concrete work needed to ship a production-grade app.
 ---
 
 ## 1) Product & UX
-- [ ] Finalize requirements for onboarding, habit rules, and success/late definitions.
+- [x] Finalize requirements for onboarding, habit rules, and success/late definitions.
 - [ ] Create full state designs: permissions denied, no-network, empty history, error states.
 - [ ] Define copy and microcopy for reminders, alarms, and verification.
 
