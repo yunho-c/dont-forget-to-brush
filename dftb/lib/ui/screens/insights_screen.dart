@@ -91,6 +91,10 @@ class _WeeklyChart extends StatelessWidget {
     return LayoutBuilder(
       builder: (context, constraints) {
         final chartHeight = constraints.maxHeight;
+        const labelBlockHeight = 18.0;
+        final barMaxHeight = chartHeight > labelBlockHeight
+            ? chartHeight - labelBlockHeight
+            : 0.0;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: mockWeeklyStats.map((stat) {
@@ -104,7 +108,7 @@ class _WeeklyChart extends StatelessWidget {
                   mainAxisAlignment: MainAxisAlignment.end,
                   children: [
                     Container(
-                      height: chartHeight * heightFactor,
+                      height: barMaxHeight * heightFactor,
                       decoration: BoxDecoration(
                         color: stat.completed
                             ? AppColors.indigo500
@@ -112,12 +116,18 @@ class _WeeklyChart extends StatelessWidget {
                         borderRadius: BorderRadius.circular(6),
                       ),
                     ),
-                    const SizedBox(height: 8),
-                    Text(
-                      stat.day,
-                      style: const TextStyle(
-                        color: AppColors.slate400,
-                        fontSize: 12,
+                    SizedBox(
+                      height: labelBlockHeight,
+                      child: Center(
+                        child: Text(
+                          stat.day,
+                          maxLines: 1,
+                          overflow: TextOverflow.clip,
+                          style: const TextStyle(
+                            color: AppColors.slate400,
+                            fontSize: 11,
+                          ),
+                        ),
                       ),
                     ),
                   ],
