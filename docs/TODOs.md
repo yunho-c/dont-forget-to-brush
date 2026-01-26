@@ -12,7 +12,7 @@ This document captures the concrete work needed to ship a production-grade app.
 ---
 
 ## 2) Core Features
-- [ ] Implement real scheduling: bedtime window, reminders, and alarms.
+- [x] Implement real scheduling: bedtime window, reminders, and alarms.
 - [ ] Implement verification methods:
   - [ ] Manual hold with failure handling.
   - [ ] NFC tag scan + tag registration flow.
@@ -33,8 +33,9 @@ This document captures the concrete work needed to ship a production-grade app.
 ---
 
 ## 4) Data & State
-- [ ] Move sessions/history to a real DB (e.g., Drift/SQLite).
-- [ ] Add data models for sessions, reminders, and alarms.
+- [x] Move sessions/history to a real DB (e.g., Drift/SQLite).
+- [x] Add data models for sessions.
+- [ ] Add data models for reminders and alarms.
 - [ ] Sync strategy (optional):
   - [ ] Account + cloud backup.
   - [ ] Multi-device reconciliation.

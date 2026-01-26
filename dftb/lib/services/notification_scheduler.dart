@@ -17,17 +17,19 @@ class NotificationScheduler {
     if (_initialized) return;
     tz.initializeTimeZones();
     final timezone = await FlutterTimezone.getLocalTimezone();
-    tz.setLocalLocation(tz.getLocation(timezone));
+    tz.setLocalLocation(tz.getLocation(timezone.identifier));
 
     const androidSettings = AndroidInitializationSettings(
       '@mipmap/ic_launcher',
     );
     const iosSettings = DarwinInitializationSettings();
+    const macosSettings = DarwinInitializationSettings();
     const initSettings = InitializationSettings(
       android: androidSettings,
       iOS: iosSettings,
+      macOS: macosSettings,
     );
-    await _plugin.initialize(initSettings);
+    await _plugin.initialize(settings: initSettings);
     _initialized = true;
   }
 
@@ -58,14 +60,12 @@ class NotificationScheduler {
       final scheduled = reminderTimes[i];
       if (scheduled.isBefore(now)) continue;
       await _plugin.zonedSchedule(
-        1000 + i,
-        'Brush reminder',
-        'Time to brush before bed.',
-        scheduled,
-        _reminderDetails(),
+        id: 1000 + i,
+        title: 'Brush reminder',
+        body: 'Time to brush before bed.',
+        scheduledDate: scheduled,
+        notificationDetails: _reminderDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
       );
     }
 
@@ -77,14 +77,12 @@ class NotificationScheduler {
     );
     if (alarmTime != null && alarmTime.isAfter(now)) {
       await _plugin.zonedSchedule(
-        2000,
-        'Brush alarm',
-        'Verification required to end the alarm.',
-        alarmTime,
-        _alarmDetails(),
+        id: 2000,
+        title: 'Brush alarm',
+        body: 'Verification required to end the alarm.',
+        scheduledDate: alarmTime,
+        notificationDetails: _alarmDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        uiLocalNotificationDateInterpretation:
-            UILocalNotificationDateInterpretation.absoluteTime,
       );
     }
   }
