@@ -12,12 +12,13 @@ class BottomNav extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return shadcn.SurfaceBlur(
-      surfaceBlur: 18,
+      surfaceBlur: 16,
       child: Container(
-        padding: const EdgeInsets.fromLTRB(24, 8, 24, 16),
+        height: 80,
+        padding: const EdgeInsets.fromLTRB(8, 8, 8, 12),
         decoration: BoxDecoration(
-          color: AppColors.night900.withValues(alpha: 0.9),
-          border: const Border(top: BorderSide(color: AppColors.night700)),
+          color: AppColors.night900.withValues(alpha: 0.8),
+          border: const Border(top: BorderSide(color: AppColors.night800)),
         ),
         child: SafeArea(
           top: false,
@@ -65,37 +66,24 @@ class _NavItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      width: 72,
-      child: shadcn.SelectedButton(
-        value: isActive,
-        onChanged: (_) => onTap(),
-        style: const shadcn.ButtonStyle.ghost(
-          size: shadcn.ButtonSize.small,
-          density: shadcn.ButtonDensity.iconComfortable,
-        ),
-        selectedStyle: const shadcn.ButtonStyle.secondary(
-          size: shadcn.ButtonSize.small,
-          density: shadcn.ButtonDensity.iconComfortable,
-        ),
+    final Color textColor = isActive ? AppColors.indigo500 : AppColors.slate500;
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(16),
+      child: SizedBox(
+        width: 64,
+        height: 64,
         child: Column(
-          mainAxisSize: MainAxisSize.min,
+          mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            Icon(
-              icon,
-              color: isActive ? AppColors.indigo500 : AppColors.slate400,
-            ),
-            const SizedBox(height: 6),
-            AnimatedOpacity(
-              opacity: isActive ? 1 : 0,
-              duration: const Duration(milliseconds: 200),
-              child: Text(
-                label,
-                style: TextStyle(
-                  fontSize: 10,
-                  color: isActive ? AppColors.indigo500 : AppColors.slate400,
-                  fontWeight: FontWeight.w600,
-                ),
+            Icon(icon, color: textColor, size: 24),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 10,
+                color: textColor,
+                fontWeight: FontWeight.w500,
               ),
             ),
           ],

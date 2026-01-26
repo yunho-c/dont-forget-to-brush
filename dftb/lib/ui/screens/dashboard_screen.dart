@@ -167,10 +167,7 @@ class _StatusCard extends StatelessWidget {
             const SizedBox(height: 16),
             Text(
               isBrushed ? "You're all set!" : "Haven't brushed yet",
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.w700,
-              ),
+              style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 8),
             Text(
