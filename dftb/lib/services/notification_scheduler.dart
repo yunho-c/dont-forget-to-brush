@@ -1,0 +1,214 @@
+import 'dart:async';
+
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter_timezone/flutter_timezone.dart';
+import 'package:timezone/data/latest.dart' as tz;
+import 'package:timezone/timezone.dart' as tz;
+
+import '../models/app_mode.dart';
+import '../models/user_settings.dart';
+
+class NotificationScheduler {
+  final FlutterLocalNotificationsPlugin _plugin =
+      FlutterLocalNotificationsPlugin();
+  bool _initialized = false;
+
+  Future<void> initialize() async {
+    if (_initialized) return;
+    tz.initializeTimeZones();
+    final timezone = await FlutterTimezone.getLocalTimezone();
+    tz.setLocalLocation(tz.getLocation(timezone));
+
+    const androidSettings = AndroidInitializationSettings(
+      '@mipmap/ic_launcher',
+    );
+    const iosSettings = DarwinInitializationSettings();
+    const initSettings = InitializationSettings(
+      android: androidSettings,
+      iOS: iosSettings,
+    );
+    await _plugin.initialize(initSettings);
+    _initialized = true;
+  }
+
+  Future<void> cancelAll() async {
+    if (!_initialized) return;
+    await _plugin.cancelAll();
+  }
+
+  Future<void> scheduleForSettings({
+    required UserSettings settings,
+    required bool sleepModeActive,
+  }) async {
+    await initialize();
+    await _plugin.cancelAll();
+
+    final now = tz.TZDateTime.now(tz.local);
+    final window = _nextWindow(settings, now);
+
+    final reminderTimes = _reminderTimes(
+      mode: settings.mode,
+      windowStart: window.start,
+      windowEnd: window.end,
+      sleepModeActive: sleepModeActive,
+      now: now,
+    );
+
+    for (int i = 0; i < reminderTimes.length; i += 1) {
+      final scheduled = reminderTimes[i];
+      if (scheduled.isBefore(now)) continue;
+      await _plugin.zonedSchedule(
+        1000 + i,
+        'Brush reminder',
+        'Time to brush before bed.',
+        scheduled,
+        _reminderDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    }
+
+    final alarmTime = _alarmTime(
+      mode: settings.mode,
+      windowStart: window.start,
+      windowEnd: window.end,
+      now: now,
+    );
+    if (alarmTime != null && alarmTime.isAfter(now)) {
+      await _plugin.zonedSchedule(
+        2000,
+        'Brush alarm',
+        'Verification required to end the alarm.',
+        alarmTime,
+        _alarmDetails(),
+        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+        uiLocalNotificationDateInterpretation:
+            UILocalNotificationDateInterpretation.absoluteTime,
+      );
+    }
+  }
+
+  _BedtimeWindow _nextWindow(UserSettings settings, tz.TZDateTime now) {
+    final start = _timeOnDate(settings.bedtimeStart, now);
+    final end = _timeOnDate(settings.bedtimeEnd, now);
+    var windowStart = start;
+    var windowEnd = end;
+    if (windowEnd.isBefore(windowStart)) {
+      windowEnd = windowEnd.add(const Duration(days: 1));
+    }
+    if (now.isAfter(windowEnd)) {
+      windowStart = windowStart.add(const Duration(days: 1));
+      windowEnd = windowEnd.add(const Duration(days: 1));
+    }
+    return _BedtimeWindow(windowStart, windowEnd);
+  }
+
+  tz.TZDateTime _timeOnDate(String time, tz.TZDateTime date) {
+    final parts = time.split(':');
+    final hour = int.tryParse(parts[0]) ?? 22;
+    final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    return tz.TZDateTime(
+      tz.local,
+      date.year,
+      date.month,
+      date.day,
+      hour,
+      minute,
+    );
+  }
+
+  List<tz.TZDateTime> _reminderTimes({
+    required AppMode mode,
+    required tz.TZDateTime windowStart,
+    required tz.TZDateTime windowEnd,
+    required bool sleepModeActive,
+    required tz.TZDateTime now,
+  }) {
+    if (mode == AppMode.gentle && sleepModeActive) {
+      return [now.add(const Duration(minutes: 90))];
+    }
+
+    final List<tz.TZDateTime> times = [];
+    switch (mode) {
+      case AppMode.gentle:
+        times.add(windowStart);
+        times.add(windowStart.add(const Duration(minutes: 45)));
+        times.add(windowStart.add(const Duration(minutes: 90)));
+        break;
+      case AppMode.accountability:
+        times.addAll(_intervalTimes(windowStart, windowEnd, 30));
+        break;
+      case AppMode.noExcuses:
+        times.addAll(_intervalTimes(windowStart, windowEnd, 20));
+        break;
+    }
+    return times;
+  }
+
+  tz.TZDateTime? _alarmTime({
+    required AppMode mode,
+    required tz.TZDateTime windowStart,
+    required tz.TZDateTime windowEnd,
+    required tz.TZDateTime now,
+  }) {
+    switch (mode) {
+      case AppMode.gentle:
+        return null;
+      case AppMode.accountability:
+        return windowEnd;
+      case AppMode.noExcuses:
+        return windowStart;
+    }
+  }
+
+  List<tz.TZDateTime> _intervalTimes(
+    tz.TZDateTime start,
+    tz.TZDateTime end,
+    int intervalMinutes,
+  ) {
+    final List<tz.TZDateTime> times = [];
+    var current = start;
+    while (!current.isAfter(end)) {
+      times.add(current);
+      current = current.add(Duration(minutes: intervalMinutes));
+    }
+    return times;
+  }
+
+  NotificationDetails _reminderDetails() {
+    const android = AndroidNotificationDetails(
+      'bedtime_reminders',
+      'Bedtime Reminders',
+      channelDescription: 'Gentle bedtime reminders to brush.',
+      importance: Importance.defaultImportance,
+      priority: Priority.defaultPriority,
+    );
+    const ios = DarwinNotificationDetails();
+    return const NotificationDetails(android: android, iOS: ios);
+  }
+
+  NotificationDetails _alarmDetails() {
+    const android = AndroidNotificationDetails(
+      'bedtime_alarm',
+      'Bedtime Alarm',
+      channelDescription: 'Alarm requiring verification to dismiss.',
+      importance: Importance.max,
+      priority: Priority.high,
+      category: AndroidNotificationCategory.alarm,
+      fullScreenIntent: true,
+    );
+    const ios = DarwinNotificationDetails(
+      presentAlert: true,
+      presentSound: true,
+    );
+    return const NotificationDetails(android: android, iOS: ios);
+  }
+}
+
+class _BedtimeWindow {
+  const _BedtimeWindow(this.start, this.end);
+
+  final tz.TZDateTime start;
+  final tz.TZDateTime end;
+}

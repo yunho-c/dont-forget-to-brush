@@ -3,14 +3,19 @@ import 'dart:async';
 import 'package:flutter/foundation.dart';
 
 import '../models/app_mode.dart';
+import '../models/brush_session.dart';
 import '../models/user_settings.dart';
 import '../models/verification_method.dart';
+import '../services/notification_scheduler.dart';
+import '../services/session_repository.dart';
 import '../services/settings_store.dart';
 
 class AppState extends ChangeNotifier {
-  AppState(this._store);
+  AppState(this._store, this._sessions, this._scheduler);
 
   final SettingsStore _store;
+  final SessionRepository _sessions;
+  final NotificationScheduler _scheduler;
 
   UserSettings _settings = UserSettings.defaults();
   bool _isReady = false;
@@ -18,7 +23,6 @@ class AppState extends ChangeNotifier {
   bool _isAlarmMode = false;
   bool _sleepModeActive = false;
   bool _isDeveloperMode = false;
-  Timer? _sleepTimer;
 
   UserSettings get settings => _settings;
   bool get isReady => _isReady;
@@ -33,6 +37,7 @@ class AppState extends ChangeNotifier {
     _settings = await _store.loadSettings();
     _isDeveloperMode = await _store.loadDeveloperMode();
     _isReady = true;
+    await _refreshSchedule();
     notifyListeners();
   }
 
@@ -50,12 +55,14 @@ class AppState extends ChangeNotifier {
       verificationMethod: method,
     );
     _persist();
+    unawaited(_refreshSchedule());
     notifyListeners();
   }
 
   void updateSettings(UserSettings settings) {
     _settings = settings;
     _persist();
+    unawaited(_refreshSchedule());
     notifyListeners();
   }
 
@@ -65,22 +72,35 @@ class AppState extends ChangeNotifier {
       bedtimeEnd: end ?? _settings.bedtimeEnd,
     );
     _persist();
+    unawaited(_refreshSchedule());
     notifyListeners();
   }
 
   void updateMode(AppMode mode) {
     _settings = _settings.copyWith(mode: mode);
     _persist();
+    unawaited(_refreshSchedule());
     notifyListeners();
   }
 
   void updateVerificationMethod(VerificationMethod method) {
     _settings = _settings.copyWith(verificationMethod: method);
     _persist();
+    unawaited(_refreshSchedule());
     notifyListeners();
   }
 
-  void markBrushed({bool wasLate = false}) {
+  Future<void> markBrushed({bool wasLate = false}) async {
+    final completionTime = DateTime.now();
+    final late = wasLate || _isLateCompletion(completionTime);
+    await _sessions.addSession(
+      BrushSession(
+        timestamp: completionTime,
+        method: _settings.verificationMethod,
+        wasLate: late,
+        durationSeconds: 120,
+      ),
+    );
     final today = _todayKey();
     final yesterday = _yesterdayKey();
     final last = _settings.lastBrushDate;
@@ -97,13 +117,14 @@ class AppState extends ChangeNotifier {
     _settings = _settings.copyWith(
       streak: nextStreak,
       lastBrushDate: today,
-      lastBrushTime: DateTime.now().toIso8601String(),
+      lastBrushTime: completionTime.toIso8601String(),
     );
     _isAlarmOpen = false;
     _isAlarmMode = false;
     _sleepModeActive = false;
-    _cancelSleepTimer();
     _persist();
+    await _scheduler.cancelAll();
+    await _refreshSchedule();
     notifyListeners();
   }
 
@@ -127,21 +148,18 @@ class AppState extends ChangeNotifier {
 
   void toggleSleepMode() {
     _sleepModeActive = !_sleepModeActive;
-    if (_sleepModeActive) {
-      _scheduleAlarm();
-    } else {
-      _cancelSleepTimer();
-    }
+    unawaited(_refreshSchedule());
     notifyListeners();
   }
 
   Future<void> reset() async {
     await _store.clear();
+    await _sessions.clearSessions();
     _settings = UserSettings.defaults();
     _isAlarmOpen = false;
     _isAlarmMode = false;
     _sleepModeActive = false;
-    _cancelSleepTimer();
+    await _scheduler.cancelAll();
     notifyListeners();
   }
 
@@ -151,24 +169,40 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _scheduleAlarm() {
-    _cancelSleepTimer();
-    _sleepTimer = Timer(const Duration(seconds: 5), () {
-      if (!isBrushedTonight) {
-        _isAlarmOpen = true;
-        _isAlarmMode = true;
-        notifyListeners();
-      }
-    });
-  }
-
-  void _cancelSleepTimer() {
-    _sleepTimer?.cancel();
-    _sleepTimer = null;
-  }
-
   void _persist() {
     _store.saveSettings(_settings);
+  }
+
+  Future<void> _refreshSchedule() async {
+    if (!_settings.isOnboarded) {
+      await _scheduler.cancelAll();
+      return;
+    }
+    await _scheduler.scheduleForSettings(
+      settings: _settings,
+      sleepModeActive: _sleepModeActive,
+    );
+  }
+
+  bool _isLateCompletion(DateTime time) {
+    final window = _bedtimeWindowFor(time);
+    return time.isAfter(window.end);
+  }
+
+  _BedtimeWindow _bedtimeWindowFor(DateTime time) {
+    final start = _timeOnDate(_settings.bedtimeStart, time);
+    var end = _timeOnDate(_settings.bedtimeEnd, time);
+    if (end.isBefore(start)) {
+      end = end.add(const Duration(days: 1));
+    }
+    return _BedtimeWindow(start, end);
+  }
+
+  DateTime _timeOnDate(String raw, DateTime date) {
+    final parts = raw.split(':');
+    final hour = int.tryParse(parts[0]) ?? 22;
+    final minute = parts.length > 1 ? int.tryParse(parts[1]) ?? 0 : 0;
+    return DateTime(date.year, date.month, date.day, hour, minute);
   }
 
   String _todayKey() {
@@ -187,7 +221,13 @@ class AppState extends ChangeNotifier {
 
   @override
   void dispose() {
-    _cancelSleepTimer();
     super.dispose();
   }
+}
+
+class _BedtimeWindow {
+  const _BedtimeWindow(this.start, this.end);
+
+  final DateTime start;
+  final DateTime end;
 }

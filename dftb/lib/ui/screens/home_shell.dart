@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -48,7 +50,7 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               isOpen: state.isAlarmOpen,
               isAlarmMode: state.isAlarmMode,
               method: state.settings.verificationMethod,
-              onSuccess: state.markBrushed,
+              onSuccess: () => unawaited(state.markBrushed()),
               onDismiss: state.closeAlarm,
             ),
           ],

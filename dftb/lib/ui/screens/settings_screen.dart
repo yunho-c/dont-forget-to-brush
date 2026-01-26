@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
@@ -146,7 +148,7 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   icon: Icons.restart_alt,
                   label: 'Reset App State',
                   value: 'Prototype only',
-                  onTap: () => state.reset(),
+                  onTap: () => unawaited(state.reset()),
                 ),
                 const Divider(height: 1, color: AppColors.night700),
                 _SettingsRow(

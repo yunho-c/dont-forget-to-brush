@@ -1,14 +1,17 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
+import '../../models/weekly_stat.dart';
+import '../../state/app_state_provider.dart';
 import '../../theme/app_colors.dart';
-import '../data/mock_data.dart';
 
-class InsightsScreen extends StatelessWidget {
+class InsightsScreen extends ConsumerWidget {
   const InsightsScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final stats = ref.watch(weeklyStatsProvider);
     return SingleChildScrollView(
       padding: const EdgeInsets.fromLTRB(24, 24, 24, 120),
       child: Column(
@@ -45,7 +48,25 @@ class InsightsScreen extends StatelessWidget {
                   ],
                 ),
                 const SizedBox(height: 16),
-                const SizedBox(height: 160, child: _WeeklyChart()),
+                SizedBox(
+                  height: 160,
+                  child: stats.when(
+                    data: (items) => _WeeklyChart(stats: items),
+                    loading: () => const Center(
+                      child: SizedBox(
+                        height: 18,
+                        width: 18,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                    ),
+                    error: (_, __) => const Center(
+                      child: Text(
+                        'Unable to load insights.',
+                        style: TextStyle(color: AppColors.slate400),
+                      ),
+                    ),
+                  ),
+                ),
               ],
             ),
           ),
@@ -80,11 +101,13 @@ class InsightsScreen extends StatelessWidget {
 }
 
 class _WeeklyChart extends StatelessWidget {
-  const _WeeklyChart();
+  const _WeeklyChart({required this.stats});
+
+  final List<WeeklyStat> stats;
 
   @override
   Widget build(BuildContext context) {
-    final maxMinutes = mockWeeklyStats
+    final maxMinutes = stats
         .map((stat) => stat.minutes)
         .fold<double>(0, (value, element) => element > value ? element : value);
 
@@ -97,7 +120,7 @@ class _WeeklyChart extends StatelessWidget {
             : 0.0;
         return Row(
           crossAxisAlignment: CrossAxisAlignment.end,
-          children: mockWeeklyStats.map((stat) {
+          children: stats.map((stat) {
             final heightFactor = maxMinutes == 0
                 ? 0.0
                 : stat.minutes / maxMinutes;
