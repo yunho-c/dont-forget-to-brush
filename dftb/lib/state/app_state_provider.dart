@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/legacy.dart';
 
 import '../models/weekly_stat.dart';
 import '../services/database_service.dart';
+import '../services/notification_repository.dart';
 import '../services/notification_scheduler.dart';
 import '../services/session_repository.dart';
 import '../services/settings_store.dart';
@@ -20,6 +21,10 @@ final sessionRepositoryProvider = Provider<SessionRepository>((ref) {
   return SessionRepository(ref.read(databaseServiceProvider));
 });
 
+final notificationRepositoryProvider = Provider<NotificationRepository>((ref) {
+  return NotificationRepository(ref.read(databaseServiceProvider));
+});
+
 final notificationSchedulerProvider = Provider<NotificationScheduler>((ref) {
   return NotificationScheduler();
 });
@@ -28,6 +33,7 @@ final appStateProvider = ChangeNotifierProvider<AppState>((ref) {
   final state = AppState(
     ref.read(settingsStoreProvider),
     ref.read(sessionRepositoryProvider),
+    ref.read(notificationRepositoryProvider),
     ref.read(notificationSchedulerProvider),
   );
   state.load();

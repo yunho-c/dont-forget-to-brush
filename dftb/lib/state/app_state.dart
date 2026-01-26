@@ -4,17 +4,20 @@ import 'package:flutter/foundation.dart';
 
 import '../models/app_mode.dart';
 import '../models/brush_session.dart';
+import '../models/notification_models.dart';
 import '../models/user_settings.dart';
 import '../models/verification_method.dart';
+import '../services/notification_repository.dart';
 import '../services/notification_scheduler.dart';
 import '../services/session_repository.dart';
 import '../services/settings_store.dart';
 
 class AppState extends ChangeNotifier {
-  AppState(this._store, this._sessions, this._scheduler);
+  AppState(this._store, this._sessions, this._notifications, this._scheduler);
 
   final SettingsStore _store;
   final SessionRepository _sessions;
+  final NotificationRepository _notifications;
   final NotificationScheduler _scheduler;
 
   UserSettings _settings = UserSettings.defaults();
@@ -23,6 +26,7 @@ class AppState extends ChangeNotifier {
   bool _isAlarmMode = false;
   bool _sleepModeActive = false;
   bool _isDeveloperMode = false;
+  String? _activeWindowId;
 
   UserSettings get settings => _settings;
   bool get isReady => _isReady;
@@ -93,6 +97,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> markBrushed({bool wasLate = false}) async {
     final completionTime = DateTime.now();
+    await _recordVerificationSuccess(completionTime);
     final late = wasLate || _isLateCompletion(completionTime);
     await _sessions.addSession(
       BrushSession(
@@ -123,6 +128,7 @@ class AppState extends ChangeNotifier {
     _isAlarmOpen = false;
     _isAlarmMode = false;
     _sleepModeActive = false;
+    _activeWindowId = null;
     _persist();
     await _scheduler.cancelAll();
     await _refreshSchedule();
@@ -156,10 +162,12 @@ class AppState extends ChangeNotifier {
   Future<void> reset() async {
     await _store.clear();
     await _sessions.clearSessions();
+    await _notifications.clearAll();
     _settings = UserSettings.defaults();
     _isAlarmOpen = false;
     _isAlarmMode = false;
     _sleepModeActive = false;
+    _activeWindowId = null;
     await _scheduler.cancelAll();
     notifyListeners();
   }
@@ -205,11 +213,28 @@ class AppState extends ChangeNotifier {
   Future<void> _refreshSchedule() async {
     if (!_settings.isOnboarded) {
       await _scheduler.cancelAll();
+      _activeWindowId = null;
       return;
     }
-    await _scheduler.scheduleForSettings(
+    final plan = await _scheduler.scheduleForSettings(
       settings: _settings,
       sleepModeActive: _sleepModeActive,
+    );
+    await _notifications.savePlan(plan);
+    _activeWindowId = plan.window.id;
+  }
+
+  Future<void> _recordVerificationSuccess(DateTime completionTime) async {
+    final windowId = _activeWindowId;
+    if (windowId == null) return;
+    await _notifications.addVerificationAttempt(
+      VerificationAttempt(
+        windowId: windowId,
+        method: _settings.verificationMethod,
+        startedAt: completionTime,
+        completedAt: completionTime,
+        result: VerificationResult.success,
+      ),
     );
   }
 

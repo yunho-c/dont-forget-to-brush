@@ -9,7 +9,7 @@ This document captures the concrete work needed to ship a production-grade app.
 - [ ] Create full state designs: permissions denied, no-network, empty history, error states.
 - [ ] Define copy and microcopy:
   - [x] Reminders + alarms.
-  - [ ] Verification + failure states.
+  - [x] Verification + failure states.
 
 ---
 
@@ -38,7 +38,7 @@ This document captures the concrete work needed to ship a production-grade app.
 ## 4) Data & State
 - [x] Move sessions/history to a real DB (e.g., Drift/SQLite).
 - [x] Add data models for sessions.
-- [ ] Add data models for reminders and alarms.
+- [x] Add data models for reminders and alarms.
 - [ ] Sync strategy (optional):
   - [ ] Account + cloud backup.
   - [ ] Multi-device reconciliation.

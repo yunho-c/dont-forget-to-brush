@@ -7,6 +7,7 @@ import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
 import '../models/app_mode.dart';
+import '../models/notification_models.dart';
 import '../models/user_settings.dart';
 
 typedef NotificationTapHandler = void Function(String? payload);
@@ -117,7 +118,7 @@ class NotificationScheduler {
     );
   }
 
-  Future<void> scheduleForSettings({
+  Future<NotificationPlan> scheduleForSettings({
     required UserSettings settings,
     required bool sleepModeActive,
   }) async {
@@ -126,6 +127,14 @@ class NotificationScheduler {
 
     final now = tz.TZDateTime.now(tz.local);
     final window = _nextWindow(settings, now);
+    final windowRecord = BedtimeWindow(
+      date: window.start,
+      startAt: window.start,
+      endAt: window.end,
+      mode: settings.mode,
+      createdAt: DateTime.now(),
+    );
+    final schedules = <NotificationSchedule>[];
 
     final reminderTimes = _reminderTimes(
       mode: settings.mode,
@@ -153,6 +162,21 @@ class NotificationScheduler {
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: 'reminder',
       );
+      schedules.add(
+        NotificationSchedule(
+          windowId: windowRecord.id,
+          type: NotificationScheduleType.reminder,
+          scheduledAt: scheduled,
+          status: NotificationScheduleStatus.scheduled,
+          payload: {
+            'title': copy.title,
+            'body': copy.body,
+            'mode': settings.mode.storageValue,
+            'sequence': i + 1,
+            'total': reminderTimes.length,
+          },
+        ),
+      );
     }
 
     final alarmTime = _alarmTime(
@@ -172,7 +196,22 @@ class NotificationScheduler {
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
         payload: 'alarm',
       );
+      schedules.add(
+        NotificationSchedule(
+          windowId: windowRecord.id,
+          type: NotificationScheduleType.alarm,
+          scheduledAt: alarmTime,
+          status: NotificationScheduleStatus.scheduled,
+          payload: {
+            'title': copy.title,
+            'body': copy.body,
+            'mode': settings.mode.storageValue,
+          },
+        ),
+      );
     }
+
+    return NotificationPlan(window: windowRecord, schedules: schedules);
   }
 
   _BedtimeWindow _nextWindow(UserSettings settings, tz.TZDateTime now) {

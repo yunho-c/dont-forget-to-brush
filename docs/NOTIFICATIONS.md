@@ -75,6 +75,41 @@ plain, human language in user-facing text.
 
 ---
 
+## Verification copy (in-app)
+
+Use short, reassuring prompts that explain the exact action.
+
+**Common header**
+- Title: **Brush to stop**
+- Body: *Finish brushing, then confirm below.*
+
+**Manual hold**
+- Prompt: *Press and hold to confirm.*
+- Helper: *Keep holding until the ring completes.*
+- Success: *All set — nice job.*
+- Failure: *That was too quick. Try again.*
+
+**NFC tag**
+- Prompt: *Hold your phone near your brush tag.*
+- Helper: *Keep it steady for a second.*
+- Success: *Tag found — you’re done.*
+- Failure (no tag): *Couldn’t find the tag. Try again.*
+- Failure (wrong tag): *That tag doesn’t match. Try the right one.*
+
+**Selfie check**
+- Prompt: *Show your smile to confirm.*
+- Helper: *Good lighting helps.*
+- Success: *Looks good — you’re done.*
+- Failure (no face): *We couldn’t see your face. Try again.*
+- Failure (too dark): *It’s too dark. Turn on a light and try again.*
+
+**Permissions**
+- Camera denied: *We need camera access for this check.*
+- NFC denied: *We need NFC access to read your tag.*
+- CTA: **Open Settings**
+
+---
+
 ## Escalation rules by mode (summary)
 
 | Mode | Reminder cadence | Persistent? | Alarm trigger | Snooze |
@@ -107,6 +142,14 @@ Keep a small pool to avoid repetition. Rotate daily.
 **Late completion (if grace applies)**
 - Title: **Late, but counted**
 - Body: *Nice recovery — streak intact.*
+
+**Verification failed (generic)**
+- Title: **Try again**
+- Body: *We didn’t get a clear confirmation yet.*
+
+**Timeout (alarm continues)**
+- Title: **Still needs a check**
+- Body: *Complete the check to stop this.*
 
 ---
 
