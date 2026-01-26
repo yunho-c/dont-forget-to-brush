@@ -17,6 +17,7 @@ class AppState extends ChangeNotifier {
   bool _isAlarmOpen = false;
   bool _isAlarmMode = false;
   bool _sleepModeActive = false;
+  bool _isDeveloperMode = false;
   Timer? _sleepTimer;
 
   UserSettings get settings => _settings;
@@ -24,11 +25,13 @@ class AppState extends ChangeNotifier {
   bool get isAlarmOpen => _isAlarmOpen;
   bool get isAlarmMode => _isAlarmMode;
   bool get sleepModeActive => _sleepModeActive;
+  bool get isDeveloperMode => _isDeveloperMode;
 
   bool get isBrushedTonight => _settings.lastBrushDate == _todayKey();
 
   Future<void> load() async {
     _settings = await _store.loadSettings();
+    _isDeveloperMode = await _store.loadDeveloperMode();
     _isReady = true;
     notifyListeners();
   }
@@ -139,6 +142,12 @@ class AppState extends ChangeNotifier {
     _isAlarmMode = false;
     _sleepModeActive = false;
     _cancelSleepTimer();
+    notifyListeners();
+  }
+
+  void toggleDeveloperMode() {
+    _isDeveloperMode = !_isDeveloperMode;
+    _store.saveDeveloperMode(_isDeveloperMode);
     notifyListeners();
   }
 

@@ -7,11 +7,27 @@ import '../../models/verification_method.dart';
 import '../../state/app_state_provider.dart';
 import '../../theme/app_colors.dart';
 
-class SettingsScreen extends ConsumerWidget {
+class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends ConsumerState<SettingsScreen> {
+  int _profileTapCount = 0;
+
+  void _handleProfileTap() {
+    _profileTapCount += 1;
+    if (_profileTapCount < 5) {
+      return;
+    }
+    _profileTapCount = 0;
+    ref.read(appStateProvider).toggleDeveloperMode();
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final state = ref.watch(appStateProvider);
     final settings = state.settings;
     final initials = _initials(settings.name);
@@ -28,19 +44,22 @@ class SettingsScreen extends ConsumerWidget {
           const SizedBox(height: 20),
           Row(
             children: [
-              Container(
-                width: 56,
-                height: 56,
-                decoration: BoxDecoration(
-                  color: AppColors.indigo500,
-                  borderRadius: BorderRadius.circular(16),
-                ),
-                child: Center(
-                  child: Text(
-                    initials,
-                    style: const TextStyle(
-                      fontWeight: FontWeight.w700,
-                      color: Colors.white,
+              GestureDetector(
+                onTap: _handleProfileTap,
+                child: Container(
+                  width: 56,
+                  height: 56,
+                  decoration: BoxDecoration(
+                    color: AppColors.indigo500,
+                    borderRadius: BorderRadius.circular(16),
+                  ),
+                  child: Center(
+                    child: Text(
+                      initials,
+                      style: const TextStyle(
+                        fontWeight: FontWeight.w700,
+                        color: Colors.white,
+                      ),
                     ),
                   ),
                 ),
@@ -117,22 +136,27 @@ class SettingsScreen extends ConsumerWidget {
               ),
             ],
           ),
-          const SizedBox(height: 20),
-          shadcn.Button.destructive(
-            onPressed: state.reset,
-            child: const Text('Reset App State (Prototype Only)'),
-          ),
-          const SizedBox(height: 8),
-          Center(
-            child: shadcn.Button.ghost(
-              onPressed: state.openAlarm,
-              style: const shadcn.ButtonStyle.ghost(
-                size: shadcn.ButtonSize.small,
-                density: shadcn.ButtonDensity.compact,
-              ),
-              child: const Text('Test Alarm'),
+          if (state.isDeveloperMode) ...[
+            const SizedBox(height: 20),
+            _SectionHeader(title: 'Developer'),
+            const SizedBox(height: 12),
+            _SettingsCard(
+              children: [
+                _SettingsRow(
+                  icon: Icons.restart_alt,
+                  label: 'Reset App State',
+                  value: 'Prototype only',
+                  onTap: () => state.reset(),
+                ),
+                const Divider(height: 1, color: AppColors.night700),
+                _SettingsRow(
+                  icon: Icons.alarm,
+                  label: 'Test Alarm',
+                  onTap: () => state.openAlarm(),
+                ),
+              ],
             ),
-          ),
+          ],
         ],
       ),
     );
@@ -195,16 +219,18 @@ class _SettingsRow extends StatelessWidget {
     required this.label,
     this.value,
     this.trailing,
+    this.onTap,
   });
 
   final IconData icon;
   final String label;
   final String? value;
   final Widget? trailing;
+  final VoidCallback? onTap;
 
   @override
   Widget build(BuildContext context) {
-    return Padding(
+    final content = Padding(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: Row(
         children: [
@@ -228,6 +254,12 @@ class _SettingsRow extends StatelessWidget {
         ],
       ),
     );
+
+    if (onTap == null) {
+      return content;
+    }
+
+    return InkWell(onTap: onTap, child: content);
   }
 }
 
