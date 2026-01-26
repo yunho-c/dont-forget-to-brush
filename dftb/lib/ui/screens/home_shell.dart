@@ -52,6 +52,9 @@ class _HomeShellState extends ConsumerState<HomeShell> {
               method: state.settings.verificationMethod,
               onSuccess: () => unawaited(state.markBrushed()),
               onDismiss: state.closeAlarm,
+              onFailure: (reason) =>
+                  unawaited(state.recordVerificationFailure(reason)),
+              onCancel: () => unawaited(state.recordVerificationCanceled()),
             ),
           ],
         ),

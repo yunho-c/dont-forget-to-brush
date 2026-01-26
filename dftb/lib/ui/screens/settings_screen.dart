@@ -5,6 +5,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../models/app_mode.dart';
+import '../../models/notification_models.dart';
 import '../../models/verification_method.dart';
 import '../../state/app_state_provider.dart';
 import '../../theme/app_colors.dart';
@@ -26,6 +27,92 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     }
     _profileTapCount = 0;
     ref.read(appStateProvider).toggleDeveloperMode();
+  }
+
+  Future<_NotificationDebugData> _loadNotificationDebugData() async {
+    final repo = ref.read(notificationRepositoryProvider);
+    final schedules = await repo.fetchRecentSchedules(limit: 8);
+    final attempts = await repo.fetchRecentVerificationAttempts(limit: 8);
+    return _NotificationDebugData(
+      schedules: schedules,
+      attempts: attempts,
+    );
+  }
+
+  void _showNotificationDebugSheet() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: AppColors.night900,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (context) {
+        return Padding(
+          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+          child: FutureBuilder<_NotificationDebugData>(
+            future: _loadNotificationDebugData(),
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final data = snapshot.data ?? _NotificationDebugData.empty();
+              return Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Notification Logs',
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  ),
+                  const SizedBox(height: 12),
+                  Expanded(
+                    child: ListView(
+                      children: [
+                        _DebugSection(
+                          title: 'Scheduled',
+                          items: data.schedules.map(_formatSchedule).toList(),
+                          emptyLabel: 'No recent schedules.',
+                        ),
+                        const SizedBox(height: 16),
+                        _DebugSection(
+                          title: 'Verification Attempts',
+                          items: data.attempts.map(_formatAttempt).toList(),
+                          emptyLabel: 'No verification attempts yet.',
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
+            },
+          ),
+        );
+      },
+    );
+  }
+
+  String _formatSchedule(NotificationSchedule schedule) {
+    final typeLabel =
+        schedule.type == NotificationScheduleType.alarm ? 'Alarm' : 'Reminder';
+    final timeLabel = _formatDateTime(schedule.scheduledAt);
+    return '$typeLabel · $timeLabel · ${schedule.status.storageValue}';
+  }
+
+  String _formatAttempt(VerificationAttempt attempt) {
+    final timeLabel = _formatDateTime(attempt.startedAt);
+    final methodLabel = attempt.method.label;
+    final resultLabel = attempt.result.storageValue;
+    final reason = attempt.failureReason?.storageValue;
+    return reason == null
+        ? '$methodLabel · $resultLabel · $timeLabel'
+        : '$methodLabel · $resultLabel ($reason) · $timeLabel';
+  }
+
+  String _formatDateTime(DateTime time) {
+    final date =
+        '${time.month.toString().padLeft(2, '0')}/${time.day.toString().padLeft(2, '0')}';
+    final hour = time.hour.toString().padLeft(2, '0');
+    final minute = time.minute.toString().padLeft(2, '0');
+    return '$date $hour:$minute';
   }
 
   @override
@@ -188,6 +275,12 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   label: 'Cancel All Notifications',
                   onTap: () => unawaited(state.cancelAllNotifications()),
                 ),
+                const Divider(height: 1, color: AppColors.night700),
+                _SettingsRow(
+                  icon: Icons.bug_report,
+                  label: 'View Notification Logs',
+                  onTap: _showNotificationDebugSheet,
+                ),
               ],
             ),
           ],
@@ -219,6 +312,52 @@ class _SectionHeader extends StatelessWidget {
         letterSpacing: 1.2,
         fontWeight: FontWeight.w700,
       ),
+    );
+  }
+}
+
+class _DebugSection extends StatelessWidget {
+  const _DebugSection({
+    required this.title,
+    required this.items,
+    required this.emptyLabel,
+  });
+
+  final String title;
+  final List<String> items;
+  final String emptyLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          title,
+          style: const TextStyle(
+            fontSize: 12,
+            color: AppColors.slate400,
+            letterSpacing: 1.1,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+        const SizedBox(height: 8),
+        if (items.isEmpty)
+          Text(
+            emptyLabel,
+            style: const TextStyle(color: AppColors.slate400, fontSize: 12),
+          )
+        else
+          ...items.map(
+            (item) => Padding(
+              padding: const EdgeInsets.only(bottom: 6),
+              child: Text(
+                item,
+                style: const TextStyle(fontSize: 12),
+              ),
+            ),
+          ),
+      ],
     );
   }
 }
@@ -350,4 +489,17 @@ class _SelectField<T> extends StatelessWidget {
       ),
     );
   }
+}
+
+class _NotificationDebugData {
+  const _NotificationDebugData({
+    required this.schedules,
+    required this.attempts,
+  });
+
+  final List<NotificationSchedule> schedules;
+  final List<VerificationAttempt> attempts;
+
+  factory _NotificationDebugData.empty() =>
+      const _NotificationDebugData(schedules: [], attempts: []);
 }

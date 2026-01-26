@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
+import '../../models/notification_models.dart';
 import '../../models/verification_method.dart';
 import '../../theme/app_colors.dart';
 
@@ -16,6 +17,8 @@ class VerificationOverlay extends StatefulWidget {
     required this.method,
     required this.onSuccess,
     required this.onDismiss,
+    this.onFailure,
+    this.onCancel,
   });
 
   final bool isOpen;
@@ -23,6 +26,8 @@ class VerificationOverlay extends StatefulWidget {
   final VerificationMethod method;
   final VoidCallback onSuccess;
   final VoidCallback onDismiss;
+  final ValueChanged<VerificationFailureReason>? onFailure;
+  final VoidCallback? onCancel;
 
   @override
   State<VerificationOverlay> createState() => _VerificationOverlayState();
@@ -106,8 +111,12 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   void _endManualPress() {
     if (widget.method != VerificationMethod.manual) return;
     if (_manualController.isAnimating) {
+      final progress = _manualController.value;
       _manualController.stop();
       _manualController.reset();
+      if (progress > 0 && progress < 1) {
+        widget.onFailure?.call(VerificationFailureReason.tooShort);
+      }
     }
   }
 
@@ -370,11 +379,15 @@ class _VerificationOverlayState extends State<VerificationOverlay>
               setState(() {
                 _step = _OverlayStep.alarm;
               });
+              widget.onCancel?.call();
             },
             child: const Text('Cancel'),
           ),
           shadcn.Button.ghost(
-            onPressed: widget.onDismiss,
+            onPressed: () {
+              widget.onCancel?.call();
+              widget.onDismiss();
+            },
             child: const Text('Skip / Emergency Dismiss'),
           ),
         ],
@@ -382,7 +395,10 @@ class _VerificationOverlayState extends State<VerificationOverlay>
     }
 
     return shadcn.Button.ghost(
-      onPressed: widget.onDismiss,
+      onPressed: () {
+        widget.onCancel?.call();
+        widget.onDismiss();
+      },
       child: const Text('Skip for now'),
     );
   }

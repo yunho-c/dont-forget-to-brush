@@ -147,6 +147,19 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> recordVerificationFailure(
+    VerificationFailureReason reason,
+  ) async {
+    await _recordVerificationAttempt(
+      result: VerificationResult.failure,
+      failureReason: reason,
+    );
+  }
+
+  Future<void> recordVerificationCanceled() async {
+    await _recordVerificationAttempt(result: VerificationResult.canceled);
+  }
+
   void openVerification() {
     _isAlarmOpen = true;
     _isAlarmMode = false;
@@ -225,15 +238,30 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> _recordVerificationSuccess(DateTime completionTime) async {
+    await _recordVerificationAttempt(
+      result: VerificationResult.success,
+      startedAt: completionTime,
+      completedAt: completionTime,
+    );
+  }
+
+  Future<void> _recordVerificationAttempt({
+    required VerificationResult result,
+    VerificationFailureReason? failureReason,
+    DateTime? startedAt,
+    DateTime? completedAt,
+  }) async {
     final windowId = _activeWindowId;
     if (windowId == null) return;
+    final timestamp = DateTime.now();
     await _notifications.addVerificationAttempt(
       VerificationAttempt(
         windowId: windowId,
         method: _settings.verificationMethod,
-        startedAt: completionTime,
-        completedAt: completionTime,
-        result: VerificationResult.success,
+        startedAt: startedAt ?? timestamp,
+        completedAt: completedAt ?? timestamp,
+        result: result,
+        failureReason: failureReason,
       ),
     );
   }

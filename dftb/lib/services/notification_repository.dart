@@ -69,4 +69,39 @@ class NotificationRepository {
     await db.delete('verification_attempts');
     await db.delete('alarm_states');
   }
+
+  Future<List<NotificationSchedule>> fetchRecentSchedules({
+    int limit = 12,
+  }) async {
+    final db = await _databaseService.database;
+    final rows = await db.query(
+      'notification_schedules',
+      orderBy: 'scheduled_at DESC',
+      limit: limit,
+    );
+    return rows.map(NotificationSchedule.fromMap).toList();
+  }
+
+  Future<List<VerificationAttempt>> fetchRecentVerificationAttempts({
+    int limit = 12,
+  }) async {
+    final db = await _databaseService.database;
+    final rows = await db.query(
+      'verification_attempts',
+      orderBy: 'started_at DESC',
+      limit: limit,
+    );
+    return rows.map(VerificationAttempt.fromMap).toList();
+  }
+
+  Future<BedtimeWindow?> fetchLatestWindow() async {
+    final db = await _databaseService.database;
+    final rows = await db.query(
+      'bedtime_windows',
+      orderBy: 'created_at DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return BedtimeWindow.fromMap(rows.first);
+  }
 }
