@@ -176,7 +176,15 @@ class _SettingsCard extends StatelessWidget {
       borderRadius: BorderRadius.circular(18),
       borderColor: AppColors.night700,
       fillColor: AppColors.night800,
-      child: Column(children: children),
+      child: Column(
+        children: [
+          for (final child in children) ...[
+            if (child is Divider) const SizedBox(height: 14),
+            child,
+            if (child is Divider) const SizedBox(height: 14),
+          ],
+        ],
+      ),
     );
   }
 }
@@ -197,7 +205,7 @@ class _SettingsRow extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       child: Row(
         children: [
           Icon(icon, color: AppColors.slate400, size: 18),
