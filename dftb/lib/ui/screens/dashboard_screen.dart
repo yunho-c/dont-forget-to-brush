@@ -140,70 +140,76 @@ class _StatusCard extends StatelessWidget {
         : AppColors.indigo500.withValues(alpha: 0.4);
     final iconColor = isBrushed ? AppColors.green500 : AppColors.indigo500;
 
-    return shadcn.Card(
-      padding: const EdgeInsets.all(24),
-      borderRadius: BorderRadius.circular(28),
-      borderColor: border,
-      fillColor: background,
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          Container(
-            width: 88,
-            height: 88,
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: AppColors.night900,
-              border: Border.all(color: border),
-            ),
-            child: Icon(
-              isBrushed ? Icons.check_rounded : Icons.nightlight_round,
-              color: iconColor,
-              size: 40,
-            ),
-          ),
-          const SizedBox(height: 16),
-          Text(
-            isBrushed ? "You're all set!" : "Haven't brushed yet",
-            style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w700),
-          ),
-          const SizedBox(height: 8),
-          Text(
-            isBrushed ? 'Sleep tight. See you tomorrow.' : quote,
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: AppColors.slate400),
-          ),
-          const SizedBox(height: 20),
-          if (!isBrushed)
-            PrimaryButton(label: 'I Brushed', onPressed: onPrimaryAction)
-          else
-            shadcn.OutlineBadge(
-              style:
-                  const shadcn.ButtonStyle.outline(
-                    size: shadcn.ButtonSize.small,
-                    density: shadcn.ButtonDensity.dense,
-                  ).copyWith(
-                    decoration: (context, states, value) {
-                      if (value is BoxDecoration) {
-                        return value.copyWith(
-                          border: Border.all(
-                            color: AppColors.green500.withValues(alpha: 0.6),
-                          ),
-                        );
-                      }
-                      return value;
-                    },
-                  ),
-              child: Text(
-                'Completed at ${_timeLabel(completedAt ?? DateTime.now())}',
-                style: const TextStyle(
-                  color: AppColors.green500,
-                  fontWeight: FontWeight.w600,
-                  fontSize: 12,
-                ),
+    return SizedBox(
+      width: double.infinity,
+      child: shadcn.Card(
+        padding: const EdgeInsets.all(24),
+        borderRadius: BorderRadius.circular(28),
+        borderColor: border,
+        fillColor: background,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            Container(
+              width: 88,
+              height: 88,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: AppColors.night900,
+                border: Border.all(color: border),
+              ),
+              child: Icon(
+                isBrushed ? Icons.check_rounded : Icons.nightlight_round,
+                color: iconColor,
+                size: 40,
               ),
             ),
-        ],
+            const SizedBox(height: 16),
+            Text(
+              isBrushed ? "You're all set!" : "Haven't brushed yet",
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              isBrushed ? 'Sleep tight. See you tomorrow.' : quote,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.slate400),
+            ),
+            const SizedBox(height: 20),
+            if (!isBrushed)
+              PrimaryButton(label: 'I Brushed', onPressed: onPrimaryAction)
+            else
+              shadcn.OutlineBadge(
+                style:
+                    const shadcn.ButtonStyle.outline(
+                      size: shadcn.ButtonSize.small,
+                      density: shadcn.ButtonDensity.dense,
+                    ).copyWith(
+                      decoration: (context, states, value) {
+                        if (value is BoxDecoration) {
+                          return value.copyWith(
+                            border: Border.all(
+                              color: AppColors.green500.withValues(alpha: 0.6),
+                            ),
+                          );
+                        }
+                        return value;
+                      },
+                    ),
+                child: Text(
+                  'Completed at ${_timeLabel(completedAt ?? DateTime.now())}',
+                  style: const TextStyle(
+                    color: AppColors.green500,
+                    fontWeight: FontWeight.w600,
+                    fontSize: 12,
+                  ),
+                ),
+              ),
+          ],
+        ),
       ),
     );
   }
