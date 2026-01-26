@@ -116,7 +116,11 @@ class _VerificationOverlayState extends State<VerificationOverlay>
     if (!widget.isOpen) return const SizedBox.shrink();
 
     final isAlarm = widget.isAlarmMode;
-    final background = isAlarm ? AppColors.red600 : AppColors.night900;
+    final background = _step == _OverlayStep.success
+        ? AppColors.green500
+        : isAlarm
+        ? AppColors.red600
+        : AppColors.night900;
 
     return Material(
       color: background,
@@ -138,17 +142,25 @@ class _VerificationOverlayState extends State<VerificationOverlay>
 
   Widget _buildHeader(bool isAlarm) {
     if (_step == _OverlayStep.success) {
-      return Column(
-        children: const [
-          Icon(Icons.check_circle, size: 72, color: AppColors.green500),
-          SizedBox(height: 12),
-          Text(
-            'Tonight Complete!',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
-          ),
-          SizedBox(height: 6),
-          Text('Sleep well.', style: TextStyle(color: AppColors.slate300)),
-        ],
+      return const SizedBox(
+        width: double.infinity,
+        child: Column(
+          children: [
+            Icon(Icons.check_circle, size: 72, color: AppColors.green500),
+            SizedBox(height: 12),
+            Text(
+              'Tonight Complete!',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+            ),
+            SizedBox(height: 6),
+            Text(
+              'Sleep well.',
+              textAlign: TextAlign.center,
+              style: TextStyle(color: AppColors.slate300),
+            ),
+          ],
+        ),
       );
     }
 
