@@ -2,6 +2,8 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'dart:io';
+
 import 'package:audio_session/audio_session.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
@@ -182,6 +184,13 @@ class _VerificationOverlayState extends State<VerificationOverlay>
       final session = await AudioSession.instance;
       await session.setActive(false);
     } catch (_) {}
+    if (Platform.isIOS) {
+      // iOS workaround: deactivating the audio session can leave SoLoud's
+      // temp loader uninitialized on re-entry, so force a clean init next time.
+      _soloud.deinit();
+      _alarmSource = null;
+      _alarmSoundTone = null;
+    }
   }
 
   Future<void> _disposeAlarmSource() async {
