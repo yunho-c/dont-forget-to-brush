@@ -216,8 +216,6 @@ class _VerificationOverlayState extends State<VerificationOverlay>
                         ),
                       ),
                     ),
-                    _buildAlarmPrimaryAction(),
-                    const SizedBox(height: 12),
                     _buildAlarmFooter(),
                   ],
                 ),
@@ -352,25 +350,6 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   }
 
   Widget _buildAlarmHeroCard() {
-    final methodCopy = _routineCopy.methods;
-    IconData methodIcon = Icons.timer_rounded;
-    MethodChipCopy chipCopy = methodCopy.manual;
-
-    switch (widget.method) {
-      case VerificationMethod.manual:
-        methodIcon = Icons.timer_rounded;
-        chipCopy = methodCopy.manual;
-        break;
-      case VerificationMethod.nfc:
-        methodIcon = Icons.nfc;
-        chipCopy = methodCopy.nfc;
-        break;
-      case VerificationMethod.selfie:
-        methodIcon = Icons.camera_alt_outlined;
-        chipCopy = methodCopy.selfie;
-        break;
-    }
-
     final heroIcon = widget.routinePhase == RoutinePhase.night
         ? Icons.nightlight_round
         : Icons.wb_sunny_outlined;
@@ -425,42 +404,40 @@ class _VerificationOverlayState extends State<VerificationOverlay>
               ),
             ),
             const SizedBox(height: 18),
-            _buildMethodChip(methodIcon, chipCopy.alarmLabel),
-            const SizedBox(height: 8),
-            Text(
-              chipCopy.alarmHint,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                color: Colors.white.withValues(alpha: 0.6),
-              ),
-            ),
+            _buildAlarmPrimaryAction(heroIcon),
           ],
         ),
       ),
     );
   }
 
-  Widget _buildMethodChip(IconData icon, String label) {
+  Widget _buildAlarmPill(IconData icon, String label) {
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      padding: const EdgeInsets.symmetric(horizontal: 22, vertical: 14),
       decoration: BoxDecoration(
-        color: Colors.white.withValues(alpha: 0.12),
+        color: Colors.white.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.18),
+            blurRadius: 16,
+            offset: const Offset(0, 8),
+          ),
+        ],
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(icon, size: 16, color: Colors.white70),
-          const SizedBox(width: 8),
+          Icon(icon, size: 18, color: Colors.white),
+          const SizedBox(width: 10),
           Text(
             label,
             style: const TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w600,
-              letterSpacing: 0.6,
-              color: Colors.white70,
+              fontSize: 16,
+              fontWeight: FontWeight.w700,
+              letterSpacing: 0.4,
+              color: Colors.white,
             ),
           ),
         ],
@@ -468,51 +445,17 @@ class _VerificationOverlayState extends State<VerificationOverlay>
     );
   }
 
-  Widget _buildAlarmPrimaryAction() {
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _step = _OverlayStep.verify;
-        });
-        _startAutoScanIfNeeded();
-      },
-      borderRadius: BorderRadius.circular(24),
-      child: Ink(
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [AppColors.emerald400, Color(0xFF14B8A6)],
-          ),
-          borderRadius: BorderRadius.circular(24),
-          boxShadow: [
-            BoxShadow(
-              color: AppColors.emerald400.withValues(alpha: 0.45),
-              blurRadius: 24,
-              offset: const Offset(0, 12),
-            ),
-          ],
-        ),
-        child: Padding(
-          padding: const EdgeInsets.symmetric(vertical: 18),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              Text(
-                _routineCopy.alarm.ctaTitle,
-                style: const TextStyle(
-                  fontSize: 22,
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 2),
-              Text(
-                _routineCopy.alarm.ctaSubtitle,
-                style: const TextStyle(fontSize: 13, color: Colors.white70),
-              ),
-            ],
-          ),
-        ),
+  Widget _buildAlarmPrimaryAction(IconData icon) {
+    return Center(
+      child: InkWell(
+        onTap: () {
+          setState(() {
+            _step = _OverlayStep.verify;
+          });
+          _startAutoScanIfNeeded();
+        },
+        borderRadius: BorderRadius.circular(999),
+        child: _buildAlarmPill(icon, _routineCopy.alarm.ctaTitle),
       ),
     );
   }
