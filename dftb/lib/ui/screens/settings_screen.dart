@@ -33,9 +33,11 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     final repo = ref.read(notificationRepositoryProvider);
     final schedules = await repo.fetchRecentSchedules(limit: 8);
     final attempts = await repo.fetchRecentVerificationAttempts(limit: 8);
+    final deliveries = await repo.fetchRecentDeliveryViews(limit: 8);
     return _NotificationDebugData(
       schedules: schedules,
       attempts: attempts,
+      deliveries: deliveries,
     );
   }
 
@@ -59,9 +61,28 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
               return Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  const Text(
-                    'Notification Logs',
-                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.w700),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Notification Logs',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      shadcn.Button.ghost(
+                        style: const shadcn.ButtonStyle.ghost(
+                          size: shadcn.ButtonSize.small,
+                          density: shadcn.ButtonDensity.compact,
+                        ),
+                        onPressed: () {
+                          Navigator.of(context).pop();
+                          _showNotificationDebugSheet();
+                        },
+                        child: const Text('Refresh'),
+                      ),
+                    ],
                   ),
                   const SizedBox(height: 12),
                   Expanded(
@@ -71,6 +92,14 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                           title: 'Scheduled',
                           items: data.schedules.map(_formatSchedule).toList(),
                           emptyLabel: 'No recent schedules.',
+                        ),
+                        const SizedBox(height: 16),
+                        _DebugSection(
+                          title: 'Delivered',
+                          items: data.deliveries
+                              .map(_formatDelivery)
+                              .toList(),
+                          emptyLabel: 'No delivery logs yet.',
                         ),
                         const SizedBox(height: 16),
                         _DebugSection(
@@ -105,6 +134,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return reason == null
         ? '$methodLabel · $resultLabel · $timeLabel'
         : '$methodLabel · $resultLabel ($reason) · $timeLabel';
+  }
+
+  String _formatDelivery(NotificationDeliveryView view) {
+    final timeLabel = _formatDateTime(view.delivery.deliveredAt);
+    final statusLabel = view.delivery.status.storageValue;
+    final typeLabel = switch (view.scheduleType) {
+      NotificationScheduleType.alarm => 'Alarm',
+      NotificationScheduleType.reminder => 'Reminder',
+      _ => 'Unknown',
+    };
+    return '$typeLabel · $timeLabel · $statusLabel';
   }
 
   String _formatDateTime(DateTime time) {
@@ -495,11 +535,17 @@ class _NotificationDebugData {
   const _NotificationDebugData({
     required this.schedules,
     required this.attempts,
+    required this.deliveries,
   });
 
   final List<NotificationSchedule> schedules;
   final List<VerificationAttempt> attempts;
+  final List<NotificationDeliveryView> deliveries;
 
   factory _NotificationDebugData.empty() =>
-      const _NotificationDebugData(schedules: [], attempts: []);
+      const _NotificationDebugData(
+        schedules: [],
+        attempts: [],
+        deliveries: [],
+      );
 }

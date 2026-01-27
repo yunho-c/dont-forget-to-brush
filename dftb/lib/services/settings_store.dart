@@ -7,6 +7,8 @@ import '../models/user_settings.dart';
 class SettingsStore {
   static const String _settingsKey = 'dftb_settings';
   static const String _developerModeKey = 'dftb_developer_mode';
+  static const String _lastScheduleAtKey = 'dftb_last_schedule_at';
+  static const String _lastTimezoneKey = 'dftb_last_timezone';
 
   Future<UserSettings> loadSettings() async {
     final prefs = await SharedPreferences.getInstance();
@@ -37,8 +39,32 @@ class SettingsStore {
     await prefs.setBool(_developerModeKey, enabled);
   }
 
+  Future<DateTime?> loadLastScheduleAt() async {
+    final prefs = await SharedPreferences.getInstance();
+    final raw = prefs.getString(_lastScheduleAtKey);
+    if (raw == null || raw.isEmpty) return null;
+    return DateTime.tryParse(raw);
+  }
+
+  Future<void> saveLastScheduleAt(DateTime time) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastScheduleAtKey, time.toIso8601String());
+  }
+
+  Future<String?> loadLastTimezone() async {
+    final prefs = await SharedPreferences.getInstance();
+    return prefs.getString(_lastTimezoneKey);
+  }
+
+  Future<void> saveLastTimezone(String timezone) async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString(_lastTimezoneKey, timezone);
+  }
+
   Future<void> clear() async {
     final prefs = await SharedPreferences.getInstance();
     await prefs.remove(_settingsKey);
+    await prefs.remove(_lastScheduleAtKey);
+    await prefs.remove(_lastTimezoneKey);
   }
 }

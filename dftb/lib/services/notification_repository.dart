@@ -43,6 +43,18 @@ class NotificationRepository {
     );
   }
 
+  Future<bool> hasDeliveryForSchedule(String scheduleId) async {
+    final db = await _databaseService.database;
+    final rows = await db.query(
+      'notification_deliveries',
+      columns: ['id'],
+      where: 'schedule_id = ?',
+      whereArgs: [scheduleId],
+      limit: 1,
+    );
+    return rows.isNotEmpty;
+  }
+
   Future<void> addVerificationAttempt(VerificationAttempt attempt) async {
     final db = await _databaseService.database;
     await db.insert(
@@ -92,6 +104,23 @@ class NotificationRepository {
       limit: limit,
     );
     return rows.map(VerificationAttempt.fromMap).toList();
+  }
+
+  Future<List<NotificationDeliveryView>> fetchRecentDeliveryViews({
+    int limit = 12,
+  }) async {
+    final db = await _databaseService.database;
+    final rows = await db.rawQuery(
+      '''
+      SELECT d.*, s.type AS schedule_type
+      FROM notification_deliveries d
+      LEFT JOIN notification_schedules s ON s.id = d.schedule_id
+      ORDER BY d.delivered_at DESC
+      LIMIT ?
+      ''',
+      [limit],
+    );
+    return rows.map(NotificationDeliveryView.fromMap).toList();
   }
 
   Future<BedtimeWindow?> fetchLatestWindow() async {

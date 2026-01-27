@@ -43,6 +43,7 @@ class AppState extends ChangeNotifier {
     await _scheduler.initialize(onNotificationTap: _handleNotificationTap);
     _isReady = true;
     await _refreshSchedule();
+    await _syncActiveDeliveries();
     notifyListeners();
   }
 
@@ -147,6 +148,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> handleAppResumed() async {
+    if (!_isReady) return;
+    if (!_settings.isOnboarded) return;
+    final shouldReschedule = await _shouldReschedule();
+    if (shouldReschedule) {
+      await _refreshSchedule();
+    }
+    await _syncActiveDeliveries();
+  }
+
   Future<void> recordVerificationFailure(
     VerificationFailureReason reason,
   ) async {
@@ -212,7 +223,9 @@ class AppState extends ChangeNotifier {
   }
 
   void _handleNotificationTap(String? payload) {
-    if (payload == 'alarm') {
+    unawaited(_logDeliveryFromPayload(payload));
+    final decoded = _scheduler.decodePayload(payload);
+    if (decoded?.type == NotificationScheduleType.alarm.storageValue) {
       openAlarm();
       return;
     }
@@ -235,6 +248,9 @@ class AppState extends ChangeNotifier {
     );
     await _notifications.savePlan(plan);
     _activeWindowId = plan.window.id;
+    await _store.saveLastScheduleAt(DateTime.now());
+    final timezone = await _scheduler.getLocalTimezone();
+    await _store.saveLastTimezone(timezone);
   }
 
   Future<void> _recordVerificationSuccess(DateTime completionTime) async {
@@ -262,6 +278,73 @@ class AppState extends ChangeNotifier {
         completedAt: completedAt ?? timestamp,
         result: result,
         failureReason: failureReason,
+      ),
+    );
+  }
+
+  Future<bool> _shouldReschedule() async {
+    final latestWindow = await _notifications.fetchLatestWindow();
+    if (latestWindow == null) {
+      return true;
+    }
+    _activeWindowId = latestWindow.id;
+    final now = DateTime.now();
+    if (now.isAfter(latestWindow.endAt)) {
+      return true;
+    }
+    final lastScheduleAt = await _store.loadLastScheduleAt();
+    if (lastScheduleAt == null) {
+      return true;
+    }
+    final lastTimezone = await _store.loadLastTimezone();
+    final currentTimezone = await _scheduler.getLocalTimezone();
+    if (lastTimezone != null && lastTimezone != currentTimezone) {
+      return true;
+    }
+    final pendingCount = await _scheduler.pendingCount();
+    if (pendingCount == 0 &&
+        now.isBefore(latestWindow.endAt) &&
+        latestWindow.mode != AppMode.gentle) {
+      return true;
+    }
+    return false;
+  }
+
+  Future<void> _syncActiveDeliveries() async {
+    try {
+      final active = await _scheduler.activeNotifications();
+      if (active.isEmpty) return;
+      for (final notification in active) {
+        final payload = _scheduler.decodePayload(notification.payload);
+        final scheduleId = payload?.scheduleId;
+        if (scheduleId == null || scheduleId.isEmpty) continue;
+        final exists = await _notifications.hasDeliveryForSchedule(scheduleId);
+        if (exists) continue;
+        await _notifications.addDelivery(
+          NotificationDelivery(
+            scheduleId: scheduleId,
+            deliveredAt: DateTime.now(),
+            status: NotificationDeliveryStatus.delivered,
+            platformId: notification.id?.toString(),
+          ),
+        );
+      }
+    } catch (error) {
+      debugPrint('[Notifications] Active fetch failed: $error');
+    }
+  }
+
+  Future<void> _logDeliveryFromPayload(String? payload) async {
+    final decoded = _scheduler.decodePayload(payload);
+    final scheduleId = decoded?.scheduleId;
+    if (scheduleId == null || scheduleId.isEmpty) return;
+    final exists = await _notifications.hasDeliveryForSchedule(scheduleId);
+    if (exists) return;
+    await _notifications.addDelivery(
+      NotificationDelivery(
+        scheduleId: scheduleId,
+        deliveredAt: DateTime.now(),
+        status: NotificationDeliveryStatus.delivered,
       ),
     );
   }

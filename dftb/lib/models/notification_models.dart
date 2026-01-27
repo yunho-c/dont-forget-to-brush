@@ -229,6 +229,33 @@ class NotificationDelivery {
   }
 }
 
+class NotificationDeliveryView {
+  const NotificationDeliveryView({
+    required this.delivery,
+    required this.scheduleType,
+  });
+
+  final NotificationDelivery delivery;
+  final NotificationScheduleType? scheduleType;
+
+  static NotificationDeliveryView fromMap(Map<String, Object?> map) {
+    final delivery = NotificationDelivery.fromMap(map);
+    final raw = map['schedule_type'] as String?;
+    return NotificationDeliveryView(
+      delivery: delivery,
+      scheduleType: _parseScheduleType(raw),
+    );
+  }
+
+  static NotificationScheduleType? _parseScheduleType(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    for (final value in NotificationScheduleType.values) {
+      if (value.name == raw) return value;
+    }
+    return null;
+  }
+}
+
 class VerificationAttempt {
   VerificationAttempt({
     String? id,

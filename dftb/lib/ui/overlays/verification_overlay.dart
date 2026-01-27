@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:ui';
 
 import 'package:flutter/material.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
@@ -124,6 +125,10 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   Widget build(BuildContext context) {
     if (!widget.isOpen) return const SizedBox.shrink();
 
+    if (_step == _OverlayStep.alarm) {
+      return _buildAlarmScreen(context);
+    }
+
     final isAlarm = widget.isAlarmMode;
     final background = _step == _OverlayStep.success
         ? AppColors.green500
@@ -143,6 +148,370 @@ class _VerificationOverlayState extends State<VerificationOverlay>
               Expanded(child: _buildBody()),
               _buildFooter(),
             ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlarmScreen(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: Stack(
+        children: [
+          _buildAlarmBackground(),
+          SafeArea(
+            child: Padding(
+              padding: const EdgeInsets.all(24),
+              child: TweenAnimationBuilder<double>(
+                tween: Tween<double>(begin: 0, end: 1),
+                duration: const Duration(milliseconds: 900),
+                curve: Curves.easeOutCubic,
+                builder: (context, value, child) {
+                  return Opacity(
+                    opacity: value,
+                    child: Transform.translate(
+                      offset: Offset(0, 18 * (1 - value)),
+                      child: child,
+                    ),
+                  );
+                },
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    _buildAlarmTopPill(),
+                    const SizedBox(height: 24),
+                    Expanded(
+                      child: Align(
+                        alignment: Alignment.center,
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 460),
+                          child: _buildAlarmHeroCard(),
+                        ),
+                      ),
+                    ),
+                    _buildAlarmPrimaryAction(),
+                    const SizedBox(height: 12),
+                    _buildAlarmFooter(),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlarmBackground() {
+    return Container(
+      decoration: const BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            AppColors.night900,
+            Color(0xFF1B2140),
+            Color(0xFF3A1C2E),
+            AppColors.orange400,
+          ],
+          stops: [0, 0.35, 0.7, 1],
+        ),
+      ),
+      child: Stack(
+        children: [
+          _buildGlowOrb(
+            alignment: const Alignment(-0.9, -0.8),
+            size: 280,
+            color: AppColors.orange400,
+            intensity: 0.5,
+          ),
+          _buildGlowOrb(
+            alignment: const Alignment(0.9, 0.9),
+            size: 360,
+            color: AppColors.indigo500,
+            intensity: 0.35,
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: 220,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    AppColors.night950.withValues(alpha: 0.7),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildGlowOrb({
+    required Alignment alignment,
+    required double size,
+    required Color color,
+    double intensity = 0.5,
+  }) {
+    return Align(
+      alignment: alignment,
+      child: IgnorePointer(
+        child: ImageFiltered(
+          imageFilter: ImageFilter.blur(sigmaX: 60, sigmaY: 60),
+          child: Container(
+            width: size,
+            height: size,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: RadialGradient(
+                colors: [
+                  color.withValues(alpha: intensity),
+                  color.withValues(alpha: 0),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlarmTopPill() {
+    return Center(
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.white.withValues(alpha: 0.12),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: const [
+            Icon(Icons.alarm_rounded, size: 16, color: Colors.white70),
+            SizedBox(width: 8),
+            Text(
+              'Morning check-in',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w600,
+                letterSpacing: 1.2,
+                color: Colors.white70,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlarmHeroCard() {
+    IconData methodIcon = Icons.timer_rounded;
+    String methodTitle = 'Hold to verify';
+    String methodHint = 'Keep pressure steady until it completes.';
+
+    switch (widget.method) {
+      case VerificationMethod.manual:
+        methodIcon = Icons.timer_rounded;
+        methodTitle = 'Hold to verify';
+        methodHint = 'Keep pressure steady until it completes.';
+        break;
+      case VerificationMethod.nfc:
+        methodIcon = Icons.nfc;
+        methodTitle = 'Tap your tag';
+        methodHint = 'Hold your device near the NFC tag.';
+        break;
+      case VerificationMethod.selfie:
+        methodIcon = Icons.camera_alt_outlined;
+        methodTitle = 'Take a selfie';
+        methodHint = 'Frame your face inside the guide.';
+        break;
+    }
+
+    return _buildGlassCard(
+      child: Padding(
+        padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: 72,
+              height: 72,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                gradient: LinearGradient(
+                  begin: Alignment.topLeft,
+                  end: Alignment.bottomRight,
+                  colors: [
+                    AppColors.orange400.withValues(alpha: 0.9),
+                    AppColors.red500,
+                  ],
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppColors.orange400.withValues(alpha: 0.45),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.wb_sunny_outlined,
+                color: Colors.white,
+                size: 34,
+              ),
+            ),
+            const SizedBox(height: 18),
+            const Text(
+              'Wake up and brush',
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 10),
+            Text(
+              'Start the day with a real check-in to protect your streak.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 15,
+                height: 1.4,
+                color: Colors.white.withValues(alpha: 0.78),
+              ),
+            ),
+            const SizedBox(height: 18),
+            _buildMethodChip(methodIcon, methodTitle),
+            const SizedBox(height: 8),
+            Text(
+              methodHint,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                color: Colors.white.withValues(alpha: 0.6),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMethodChip(IconData icon, String label) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+      decoration: BoxDecoration(
+        color: Colors.white.withValues(alpha: 0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.2)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: Colors.white70),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              fontSize: 12,
+              fontWeight: FontWeight.w600,
+              letterSpacing: 0.6,
+              color: Colors.white70,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildAlarmPrimaryAction() {
+    return InkWell(
+      onTap: () {
+        setState(() {
+          _step = _OverlayStep.verify;
+        });
+        _startAutoScanIfNeeded();
+      },
+      borderRadius: BorderRadius.circular(24),
+      child: Ink(
+        decoration: BoxDecoration(
+          gradient: const LinearGradient(
+            begin: Alignment.topLeft,
+            end: Alignment.bottomRight,
+            colors: [AppColors.emerald400, Color(0xFF14B8A6)],
+          ),
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: AppColors.emerald400.withValues(alpha: 0.45),
+              blurRadius: 24,
+              offset: const Offset(0, 12),
+            ),
+          ],
+        ),
+        child: const Padding(
+          padding: EdgeInsets.symmetric(vertical: 18),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                "I'm up",
+                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+              ),
+              SizedBox(height: 2),
+              Text(
+                'Start check-in',
+                style: TextStyle(fontSize: 13, color: Colors.white70),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlarmFooter() {
+    return TextButton(
+      onPressed: () {
+        widget.onCancel?.call();
+        widget.onDismiss();
+      },
+      style: TextButton.styleFrom(
+        foregroundColor: Colors.white.withValues(alpha: 0.75),
+      ),
+      child: const Text(
+        'Skip for now',
+        style: TextStyle(fontWeight: FontWeight.w600),
+      ),
+    );
+  }
+
+  Widget _buildGlassCard({required Widget child}) {
+    return Container(
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        boxShadow: [
+          BoxShadow(
+            color: AppColors.night950.withValues(alpha: 0.45),
+            blurRadius: 30,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(28),
+        child: BackdropFilter(
+          filter: ImageFilter.blur(sigmaX: 18, sigmaY: 18),
+          child: Container(
+            decoration: BoxDecoration(
+              color: Colors.white.withValues(alpha: 0.08),
+              borderRadius: BorderRadius.circular(28),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.16)),
+            ),
+            child: child,
           ),
         ),
       ),
@@ -170,25 +539,6 @@ class _VerificationOverlayState extends State<VerificationOverlay>
             ),
           ],
         ),
-      );
-    }
-
-    if (_step == _OverlayStep.alarm) {
-      return Column(
-        children: const [
-          Icon(Icons.lock_outline, size: 48, color: Colors.white),
-          SizedBox(height: 16),
-          Text(
-            'Wake Up & Brush',
-            style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
-          ),
-          SizedBox(height: 8),
-          Text(
-            "Don't break the streak. Prove you're awake.",
-            textAlign: TextAlign.center,
-            style: TextStyle(color: AppColors.slate300),
-          ),
-        ],
       );
     }
 
@@ -224,24 +574,6 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   Widget _buildBody() {
     if (_step == _OverlayStep.success) {
       return const SizedBox.shrink();
-    }
-
-    if (_step == _OverlayStep.alarm) {
-      return Center(
-        child: shadcn.Button.primary(
-          style: const shadcn.ButtonStyle.primary(
-            size: shadcn.ButtonSize.large,
-            density: shadcn.ButtonDensity.comfortable,
-          ),
-          onPressed: () {
-            setState(() {
-              _step = _OverlayStep.verify;
-            });
-            _startAutoScanIfNeeded();
-          },
-          child: const Text("I'm Up, Let's Brush"),
-        ),
-      );
     }
 
     switch (widget.method) {

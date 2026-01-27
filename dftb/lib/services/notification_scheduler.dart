@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:convert';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
@@ -78,7 +79,7 @@ class NotificationScheduler {
       scheduledDate: scheduled,
       notificationDetails: _reminderDetails(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: 'reminder',
+      payload: jsonEncode(const {'type': 'reminder', 'scheduleId': 'test'}),
     );
   }
 
@@ -94,7 +95,7 @@ class NotificationScheduler {
       scheduledDate: scheduled,
       notificationDetails: _alarmDetails(),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-      payload: 'alarm',
+      payload: jsonEncode(const {'type': 'alarm', 'scheduleId': 'test'}),
     );
   }
 
@@ -105,7 +106,7 @@ class NotificationScheduler {
       title: 'Test notification',
       body: 'If you see this, delivery works.',
       notificationDetails: _reminderDetails(),
-      payload: 'reminder',
+      payload: jsonEncode(const {'type': 'reminder', 'scheduleId': 'test'}),
     );
   }
 
@@ -116,6 +117,22 @@ class NotificationScheduler {
       '[Notifications] Pending requests: ${pending.length} -> '
       '${pending.map((e) => e.id).toList()}',
     );
+  }
+
+  Future<int> pendingCount() async {
+    await initialize();
+    final pending = await _plugin.pendingNotificationRequests();
+    return pending.length;
+  }
+
+  Future<List<ActiveNotification>> activeNotifications() async {
+    await initialize();
+    return _plugin.getActiveNotifications();
+  }
+
+  Future<String> getLocalTimezone() async {
+    final timezone = await FlutterTimezone.getLocalTimezone();
+    return timezone.identifier;
   }
 
   Future<NotificationPlan> scheduleForSettings({
@@ -153,6 +170,19 @@ class NotificationScheduler {
         total: reminderTimes.length,
         sleepModeActive: sleepModeActive,
       );
+      final schedule = NotificationSchedule(
+        windowId: windowRecord.id,
+        type: NotificationScheduleType.reminder,
+        scheduledAt: scheduled,
+        status: NotificationScheduleStatus.scheduled,
+        payload: {
+          'title': copy.title,
+          'body': copy.body,
+          'mode': settings.mode.storageValue,
+          'sequence': i + 1,
+          'total': reminderTimes.length,
+        },
+      );
       await _plugin.zonedSchedule(
         id: 1000 + i,
         title: copy.title,
@@ -160,23 +190,9 @@ class NotificationScheduler {
         scheduledDate: scheduled,
         notificationDetails: _reminderDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: 'reminder',
+        payload: _encodePayload(schedule),
       );
-      schedules.add(
-        NotificationSchedule(
-          windowId: windowRecord.id,
-          type: NotificationScheduleType.reminder,
-          scheduledAt: scheduled,
-          status: NotificationScheduleStatus.scheduled,
-          payload: {
-            'title': copy.title,
-            'body': copy.body,
-            'mode': settings.mode.storageValue,
-            'sequence': i + 1,
-            'total': reminderTimes.length,
-          },
-        ),
-      );
+      schedules.add(schedule);
     }
 
     final alarmTime = _alarmTime(
@@ -187,6 +203,17 @@ class NotificationScheduler {
     );
     if (alarmTime != null && alarmTime.isAfter(now)) {
       final copy = _alarmCopy(settings.mode);
+      final schedule = NotificationSchedule(
+        windowId: windowRecord.id,
+        type: NotificationScheduleType.alarm,
+        scheduledAt: alarmTime,
+        status: NotificationScheduleStatus.scheduled,
+        payload: {
+          'title': copy.title,
+          'body': copy.body,
+          'mode': settings.mode.storageValue,
+        },
+      );
       await _plugin.zonedSchedule(
         id: 2000,
         title: copy.title,
@@ -194,21 +221,9 @@ class NotificationScheduler {
         scheduledDate: alarmTime,
         notificationDetails: _alarmDetails(),
         androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: 'alarm',
+        payload: _encodePayload(schedule),
       );
-      schedules.add(
-        NotificationSchedule(
-          windowId: windowRecord.id,
-          type: NotificationScheduleType.alarm,
-          scheduledAt: alarmTime,
-          status: NotificationScheduleStatus.scheduled,
-          payload: {
-            'title': copy.title,
-            'body': copy.body,
-            'mode': settings.mode.storageValue,
-          },
-        ),
-      );
+      schedules.add(schedule);
     }
 
     return NotificationPlan(window: windowRecord, schedules: schedules);
@@ -461,6 +476,37 @@ class NotificationScheduler {
         );
     }
   }
+
+  String _encodePayload(NotificationSchedule schedule) {
+    return jsonEncode(<String, String>{
+      'scheduleId': schedule.id,
+      'type': schedule.type.storageValue,
+    });
+  }
+
+  NotificationPayload? decodePayload(String? raw) {
+    if (raw == null || raw.isEmpty) return null;
+    if (raw == 'alarm' || raw == 'reminder') {
+      return NotificationPayload(type: raw);
+    }
+    try {
+      final decoded = jsonDecode(raw);
+      if (decoded is! Map<String, dynamic>) return null;
+      return NotificationPayload(
+        scheduleId: decoded['scheduleId'] as String?,
+        type: decoded['type'] as String?,
+      );
+    } catch (_) {
+      return null;
+    }
+  }
+}
+
+class NotificationPayload {
+  const NotificationPayload({this.scheduleId, this.type});
+
+  final String? scheduleId;
+  final String? type;
 }
 
 class _NotificationCopy {
