@@ -42,7 +42,7 @@ class RoutineCopy {
       subtitle: 'Kick off the morning strong.',
     ),
     success: RoutineSuccessCopy(
-      title: 'Morning complete!',
+      title: 'Off to a great start!',
       subtitle: 'Have a great day.',
     ),
     methods: RoutineMethodCopy.shared,
@@ -64,7 +64,7 @@ class RoutineCopy {
       subtitle: 'Let\'s finish the day strong.',
     ),
     success: RoutineSuccessCopy(
-      title: 'Tonight complete!',
+      title: 'Good night!',
       subtitle: 'Sleep well.',
     ),
     methods: RoutineMethodCopy.shared,

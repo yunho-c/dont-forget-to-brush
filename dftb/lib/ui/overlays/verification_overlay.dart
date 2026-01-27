@@ -43,6 +43,7 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   late final AnimationController _manualController;
   Timer? _scanTimer;
   bool _cameraActive = false;
+  bool _isClosing = false;
 
   RoutineCopy get _routineCopy => RoutineCopy.forPhase(widget.routinePhase);
 
@@ -79,6 +80,7 @@ class _VerificationOverlayState extends State<VerificationOverlay>
     _scanTimer?.cancel();
     _manualController.reset();
     _cameraActive = widget.method == VerificationMethod.selfie;
+    _isClosing = false;
     _step = widget.isAlarmMode ? _OverlayStep.alarm : _OverlayStep.verify;
     if (_step == _OverlayStep.verify) {
       _startAutoScanIfNeeded();
@@ -98,8 +100,15 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   void _completeVerification() {
     setState(() {
       _step = _OverlayStep.success;
+      _isClosing = false;
     });
-    Future<void>.delayed(const Duration(milliseconds: 1400), () {
+    Future<void>.delayed(const Duration(milliseconds: 1900), () {
+      if (!mounted) return;
+      setState(() {
+        _isClosing = true;
+      });
+    });
+    Future<void>.delayed(const Duration(milliseconds: 2300), () {
       if (mounted) {
         widget.onSuccess();
       }
@@ -132,6 +141,10 @@ class _VerificationOverlayState extends State<VerificationOverlay>
 
     if (_step == _OverlayStep.alarm) {
       return _buildAlarmScreen(context);
+    }
+
+    if (_step == _OverlayStep.success) {
+      return _buildSuccessScreen(context);
     }
 
     final isAlarm = widget.isAlarmMode;
@@ -177,6 +190,207 @@ class _VerificationOverlayState extends State<VerificationOverlay>
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSuccessScreen(BuildContext context) {
+    return AnimatedOpacity(
+      duration: const Duration(milliseconds: 380),
+      opacity: _isClosing ? 0 : 1,
+      curve: Curves.easeInOut,
+      child: Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            _buildSuccessBackground(),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: TweenAnimationBuilder<double>(
+                  tween: Tween<double>(begin: 0, end: 1),
+                  duration: const Duration(milliseconds: 900),
+                  curve: Curves.easeOutCubic,
+                  builder: (context, value, child) {
+                    return Opacity(
+                      opacity: value,
+                      child: Transform.translate(
+                        offset: Offset(0, 16 * (1 - value)),
+                        child: child,
+                      ),
+                    );
+                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const SizedBox(height: 16),
+                      Expanded(
+                        child: Center(
+                          child: ConstrainedBox(
+                            constraints: const BoxConstraints(maxWidth: 420),
+                            child: Column(
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                _buildSuccessHero(),
+                                const SizedBox(height: 24),
+                                Text(
+                                  _routineCopy.success.title,
+                                  textAlign: TextAlign.center,
+                                  style: const TextStyle(
+                                    fontSize: 30,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  _routineCopy.success.subtitle,
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    height: 1.4,
+                                    color:
+                                        Colors.white.withValues(alpha: 0.78),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSuccessBackground() {
+    final isNight = widget.routinePhase == RoutinePhase.night;
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: isNight
+          ? const [
+              Color(0xFF071421),
+              Color(0xFF0B2535),
+              Color(0xFF0F3A46),
+              Color(0xFF13604F),
+            ]
+          : const [
+              Color(0xFF052821),
+              Color(0xFF0C4A3C),
+              Color(0xFF0E6B50),
+              Color(0xFF1DAA6D),
+            ],
+      stops: const [0, 0.4, 0.7, 1],
+    );
+
+    final primaryOrbColor =
+        isNight ? const Color(0xFF2EC4B6) : AppColors.emerald400;
+    final secondaryOrbColor =
+        isNight ? AppColors.indigo500 : const Color(0xFF22D3EE);
+
+    return Container(
+      decoration: BoxDecoration(gradient: gradient),
+      child: Stack(
+        children: [
+          _buildGlowOrb(
+            alignment: const Alignment(-0.8, -0.75),
+            size: 260,
+            color: primaryOrbColor,
+            intensity: 0.45,
+          ),
+          _buildGlowOrb(
+            alignment: const Alignment(0.9, 0.8),
+            size: 340,
+            color: secondaryOrbColor,
+            intensity: 0.35,
+          ),
+          Align(
+            alignment: Alignment.bottomCenter,
+            child: Container(
+              height: 200,
+              decoration: BoxDecoration(
+                gradient: LinearGradient(
+                  begin: Alignment.topCenter,
+                  end: Alignment.bottomCenter,
+                  colors: [
+                    Colors.transparent,
+                    Colors.black.withValues(alpha: 0.35),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSuccessHero() {
+    final isNight = widget.routinePhase == RoutinePhase.night;
+    final glowColor =
+        isNight ? const Color(0xFF5EEAD4) : const Color(0xFF86FCD5);
+    final coreGradient = isNight
+        ? const [Color(0xFF1AAE8D), Color(0xFF2DD4BF)]
+        : const [Color(0xFF22C55E), Color(0xFF34D399)];
+
+    return Stack(
+      alignment: Alignment.center,
+      children: [
+        Container(
+          width: 190,
+          height: 190,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: RadialGradient(
+              colors: [
+                glowColor.withValues(alpha: 0.35),
+                Colors.transparent,
+              ],
+            ),
+          ),
+        ),
+        Container(
+          width: 140,
+          height: 140,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            border: Border.all(
+              color: Colors.white.withValues(alpha: 0.12),
+              width: 1.5,
+            ),
+          ),
+        ),
+        Container(
+          width: 110,
+          height: 110,
+          decoration: BoxDecoration(
+            shape: BoxShape.circle,
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: coreGradient,
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: glowColor.withValues(alpha: 0.45),
+                blurRadius: 24,
+                offset: const Offset(0, 12),
+              ),
+            ],
+          ),
+          child: const Icon(
+            Icons.check_rounded,
+            color: Colors.white,
+            size: 52,
+          ),
+        ),
+      ],
     );
   }
 
