@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
+import '../../models/alarm_tone.dart';
 import '../../models/app_mode.dart';
 import '../../models/notification_models.dart';
 import '../../models/routine_copy.dart';
@@ -265,6 +266,27 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   onChanged: (mode) {
                     if (mode != null) {
                       state.updateMode(mode);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _SectionHeader(title: 'Alarm'),
+          const SizedBox(height: 12),
+          _SettingsCard(
+            children: [
+              _SettingsRow(
+                icon: Icons.music_note,
+                label: 'Alarm Sound',
+                trailing: _SelectField<AlarmTone>(
+                  value: settings.alarmTone,
+                  items: AlarmTone.values,
+                  labelBuilder: (tone) => tone.label,
+                  onChanged: (tone) {
+                    if (tone != null) {
+                      state.updateAlarmTone(tone);
                     }
                   },
                 ),

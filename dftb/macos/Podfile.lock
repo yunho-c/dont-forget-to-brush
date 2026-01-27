@@ -1,5 +1,9 @@
 PODS:
+  - audio_session (0.0.1):
+    - FlutterMacOS
   - flutter_local_notifications (0.0.1):
+    - FlutterMacOS
+  - flutter_soloud (0.0.1):
     - FlutterMacOS
   - flutter_timezone (0.1.0):
     - FlutterMacOS
@@ -12,15 +16,21 @@ PODS:
     - FlutterMacOS
 
 DEPENDENCIES:
+  - audio_session (from `Flutter/ephemeral/.symlinks/plugins/audio_session/macos`)
   - flutter_local_notifications (from `Flutter/ephemeral/.symlinks/plugins/flutter_local_notifications/macos`)
+  - flutter_soloud (from `Flutter/ephemeral/.symlinks/plugins/flutter_soloud/macos`)
   - flutter_timezone (from `Flutter/ephemeral/.symlinks/plugins/flutter_timezone/macos`)
   - FlutterMacOS (from `Flutter/ephemeral`)
   - shared_preferences_foundation (from `Flutter/ephemeral/.symlinks/plugins/shared_preferences_foundation/darwin`)
   - sqflite_darwin (from `Flutter/ephemeral/.symlinks/plugins/sqflite_darwin/darwin`)
 
 EXTERNAL SOURCES:
+  audio_session:
+    :path: Flutter/ephemeral/.symlinks/plugins/audio_session/macos
   flutter_local_notifications:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_local_notifications/macos
+  flutter_soloud:
+    :path: Flutter/ephemeral/.symlinks/plugins/flutter_soloud/macos
   flutter_timezone:
     :path: Flutter/ephemeral/.symlinks/plugins/flutter_timezone/macos
   FlutterMacOS:
@@ -31,7 +41,9 @@ EXTERNAL SOURCES:
     :path: Flutter/ephemeral/.symlinks/plugins/sqflite_darwin/darwin
 
 SPEC CHECKSUMS:
+  audio_session: eaca2512cf2b39212d724f35d11f46180ad3a33e
   flutter_local_notifications: 4bf37a31afde695b56091b4ae3e4d9c7a7e6cda0
+  flutter_soloud: 93c20641a100d25bfbc84a8b86e867f350ef29ac
   flutter_timezone: d272288c69082ad571630e0d17140b3d6b93dc0c
   FlutterMacOS: d0db08ddef1a9af05a5ec4b724367152bb0500b1
   shared_preferences_foundation: 7036424c3d8ec98dfe75ff1667cb0cd531ec82bb

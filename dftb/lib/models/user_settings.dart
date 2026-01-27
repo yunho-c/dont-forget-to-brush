@@ -1,3 +1,4 @@
+import 'alarm_tone.dart';
 import 'app_mode.dart';
 import 'verification_method.dart';
 
@@ -9,6 +10,7 @@ class UserSettings {
     required this.bedtimeEnd,
     required this.mode,
     required this.verificationMethod,
+    required this.alarmTone,
     required this.streak,
     required this.lastBrushDate,
     required this.lastBrushTime,
@@ -20,6 +22,7 @@ class UserSettings {
   final String bedtimeEnd;
   final AppMode mode;
   final VerificationMethod verificationMethod;
+  final AlarmTone alarmTone;
   final int streak;
   final String? lastBrushDate;
   final String? lastBrushTime;
@@ -31,6 +34,7 @@ class UserSettings {
     String? bedtimeEnd,
     AppMode? mode,
     VerificationMethod? verificationMethod,
+    AlarmTone? alarmTone,
     int? streak,
     String? lastBrushDate,
     String? lastBrushTime,
@@ -42,6 +46,7 @@ class UserSettings {
       bedtimeEnd: bedtimeEnd ?? this.bedtimeEnd,
       mode: mode ?? this.mode,
       verificationMethod: verificationMethod ?? this.verificationMethod,
+      alarmTone: alarmTone ?? this.alarmTone,
       streak: streak ?? this.streak,
       lastBrushDate: lastBrushDate ?? this.lastBrushDate,
       lastBrushTime: lastBrushTime ?? this.lastBrushTime,
@@ -56,6 +61,7 @@ class UserSettings {
       'bedtimeEnd': bedtimeEnd,
       'mode': mode.storageValue,
       'verificationMethod': verificationMethod.storageValue,
+      'alarmTone': alarmTone.storageValue,
       'streak': streak,
       'lastBrushDate': lastBrushDate,
       'lastBrushTime': lastBrushTime,
@@ -72,6 +78,7 @@ class UserSettings {
       verificationMethod: VerificationMethodX.fromStorage(
         json['verificationMethod'] as String?,
       ),
+      alarmTone: AlarmToneX.fromStorage(json['alarmTone'] as String?),
       streak: json['streak'] as int? ?? 0,
       lastBrushDate: json['lastBrushDate'] as String?,
       lastBrushTime: json['lastBrushTime'] as String?,
@@ -86,6 +93,7 @@ class UserSettings {
       bedtimeEnd: '01:00',
       mode: AppMode.accountability,
       verificationMethod: VerificationMethod.manual,
+      alarmTone: AlarmTone.classic,
       streak: 0,
       lastBrushDate: null,
       lastBrushTime: null,

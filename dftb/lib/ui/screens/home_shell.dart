@@ -71,8 +71,13 @@ class _HomeShellState extends ConsumerState<HomeShell>
               isAlarmMode: state.isAlarmMode,
               routinePhase: state.routinePhase,
               method: state.settings.verificationMethod,
+              alarmTone: state.settings.alarmTone,
+              supportsSnooze: state.supportsSnooze,
+              canSnooze: state.canSnooze,
+              snoozeLabel: state.snoozeLabel,
               onSuccess: () => unawaited(state.markBrushed()),
               onDismiss: state.closeAlarm,
+              onSnooze: () => unawaited(state.snoozeAlarm()),
               onFailure: (reason) =>
                   unawaited(state.recordVerificationFailure(reason)),
               onCancel: () => unawaited(state.recordVerificationCanceled()),

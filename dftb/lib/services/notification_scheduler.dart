@@ -7,6 +7,7 @@ import 'package:flutter_timezone/flutter_timezone.dart';
 import 'package:timezone/data/latest.dart' as tz;
 import 'package:timezone/timezone.dart' as tz;
 
+import '../models/alarm_tone.dart';
 import '../models/app_mode.dart';
 import '../models/notification_models.dart';
 import '../models/user_settings.dart';
@@ -17,6 +18,7 @@ class NotificationScheduler {
   final FlutterLocalNotificationsPlugin _plugin =
       FlutterLocalNotificationsPlugin();
   bool _initialized = false;
+  static const int _alarmNotificationId = 2000;
 
   Future<void> initialize({NotificationTapHandler? onNotificationTap}) async {
     if (_initialized) return;
@@ -85,6 +87,7 @@ class NotificationScheduler {
 
   Future<void> scheduleTestAlarm({
     Duration delay = const Duration(seconds: 15),
+    AlarmTone tone = AlarmTone.classic,
   }) async {
     await initialize();
     final scheduled = tz.TZDateTime.now(tz.local).add(delay);
@@ -93,7 +96,7 @@ class NotificationScheduler {
       title: 'Test alarm',
       body: 'This is a test alarm.',
       scheduledDate: scheduled,
-      notificationDetails: _alarmDetails(),
+      notificationDetails: _alarmDetails(tone),
       androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
       payload: jsonEncode(const {'type': 'alarm', 'scheduleId': 'test'}),
     );
@@ -202,31 +205,67 @@ class NotificationScheduler {
       now: now,
     );
     if (alarmTime != null && alarmTime.isAfter(now)) {
-      final copy = _alarmCopy(settings.mode);
-      final schedule = NotificationSchedule(
+      final schedule = await _scheduleAlarmAt(
         windowId: windowRecord.id,
-        type: NotificationScheduleType.alarm,
         scheduledAt: alarmTime,
-        status: NotificationScheduleStatus.scheduled,
-        payload: {
-          'title': copy.title,
-          'body': copy.body,
-          'mode': settings.mode.storageValue,
-        },
-      );
-      await _plugin.zonedSchedule(
-        id: 2000,
-        title: copy.title,
-        body: copy.body,
-        scheduledDate: alarmTime,
-        notificationDetails: _alarmDetails(),
-        androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
-        payload: _encodePayload(schedule),
+        mode: settings.mode,
+        tone: settings.alarmTone,
       );
       schedules.add(schedule);
     }
 
     return NotificationPlan(window: windowRecord, schedules: schedules);
+  }
+
+  Future<void> cancelAlarmNotification() async {
+    await initialize();
+    await _plugin.cancel(id: _alarmNotificationId);
+  }
+
+  Future<NotificationSchedule> scheduleSnoozeAlarm({
+    required String windowId,
+    required AppMode mode,
+    required AlarmTone tone,
+    required Duration delay,
+  }) async {
+    await initialize();
+    final scheduledAt = tz.TZDateTime.now(tz.local).add(delay);
+    return _scheduleAlarmAt(
+      windowId: windowId,
+      scheduledAt: scheduledAt,
+      mode: mode,
+      tone: tone,
+    );
+  }
+
+  Future<NotificationSchedule> _scheduleAlarmAt({
+    required String windowId,
+    required tz.TZDateTime scheduledAt,
+    required AppMode mode,
+    required AlarmTone tone,
+  }) async {
+    final copy = _alarmCopy(mode);
+    final schedule = NotificationSchedule(
+      windowId: windowId,
+      type: NotificationScheduleType.alarm,
+      scheduledAt: scheduledAt,
+      status: NotificationScheduleStatus.scheduled,
+      payload: {
+        'title': copy.title,
+        'body': copy.body,
+        'mode': mode.storageValue,
+      },
+    );
+    await _plugin.zonedSchedule(
+      id: _alarmNotificationId,
+      title: copy.title,
+      body: copy.body,
+      scheduledDate: scheduledAt,
+      notificationDetails: _alarmDetails(tone),
+      androidScheduleMode: AndroidScheduleMode.exactAllowWhileIdle,
+      payload: _encodePayload(schedule),
+    );
+    return schedule;
   }
 
   _BedtimeWindow _nextWindow(UserSettings settings, tz.TZDateTime now) {
@@ -345,37 +384,48 @@ class NotificationScheduler {
     );
   }
 
-  NotificationDetails _alarmDetails() {
-    const android = AndroidNotificationDetails(
-      'bedtime_alarm',
-      'Bedtime Alarm',
+  NotificationDetails _alarmDetails(AlarmTone tone) {
+    final android = AndroidNotificationDetails(
+      _alarmChannelId(tone),
+      'Bedtime Alarm (${tone.label})',
       channelDescription: 'Alarm requiring verification to dismiss.',
       importance: Importance.max,
       priority: Priority.high,
       category: AndroidNotificationCategory.alarm,
       fullScreenIntent: true,
+      channelBypassDnd: true,
+      audioAttributesUsage: AudioAttributesUsage.alarm,
+      sound: RawResourceAndroidNotificationSound(tone.androidResource),
     );
-    const ios = DarwinNotificationDetails(
+    final ios = DarwinNotificationDetails(
       presentAlert: true,
       presentSound: true,
       presentBadge: false,
       presentBanner: true,
       presentList: true,
-      interruptionLevel: InterruptionLevel.timeSensitive,
+      interruptionLevel: InterruptionLevel.critical,
+      criticalSoundVolume: 1.0,
+      sound: tone.iosFilename,
     );
-    const macos = DarwinNotificationDetails(
+    final macos = DarwinNotificationDetails(
       presentAlert: true,
       presentSound: true,
       presentBadge: false,
       presentBanner: true,
       presentList: true,
-      interruptionLevel: InterruptionLevel.timeSensitive,
+      interruptionLevel: InterruptionLevel.critical,
+      criticalSoundVolume: 1.0,
+      sound: tone.iosFilename,
     );
-    return const NotificationDetails(
+    return NotificationDetails(
       android: android,
       iOS: ios,
       macOS: macos,
     );
+  }
+
+  String _alarmChannelId(AlarmTone tone) {
+    return 'bedtime_alarm_${tone.storageValue}';
   }
 
   Future<void> _requestPermissions() async {
@@ -384,6 +434,7 @@ class NotificationScheduler {
           AndroidFlutterLocalNotificationsPlugin
         >();
     await android?.requestNotificationsPermission();
+    await android?.requestNotificationPolicyAccess();
     await android?.requestExactAlarmsPermission();
     await android?.requestFullScreenIntentPermission();
 
@@ -395,6 +446,7 @@ class NotificationScheduler {
       alert: true,
       badge: true,
       sound: true,
+      critical: true,
     );
 
     final macos = _plugin
@@ -405,6 +457,7 @@ class NotificationScheduler {
       alert: true,
       badge: true,
       sound: true,
+      critical: true,
     );
   }
 

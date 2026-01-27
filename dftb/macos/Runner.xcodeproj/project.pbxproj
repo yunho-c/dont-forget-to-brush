@@ -27,6 +27,9 @@
 		33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F22044A3C60003C045 /* Assets.xcassets */; };
 		33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */ = {isa = PBXBuildFile; fileRef = 33CC10F42044A3C60003C045 /* MainMenu.xib */; };
 		33CC11132044BFA00003C045 /* MainFlutterWindow.swift in Sources */ = {isa = PBXBuildFile; fileRef = 33CC11122044BFA00003C045 /* MainFlutterWindow.swift */; };
+		A0B1C2D3E4F5060708090A11 /* alarm_classic.wav in Resources */ = {isa = PBXBuildFile; fileRef = A0B1C2D3E4F5060708090A01 /* alarm_classic.wav */; };
+		A0B1C2D3E4F5060708090A12 /* alarm_pulse.wav in Resources */ = {isa = PBXBuildFile; fileRef = A0B1C2D3E4F5060708090A02 /* alarm_pulse.wav */; };
+		A0B1C2D3E4F5060708090A13 /* alarm_chime.wav in Resources */ = {isa = PBXBuildFile; fileRef = A0B1C2D3E4F5060708090A03 /* alarm_chime.wav */; };
 		4D7ED99333E76E67F86BB2BA /* Pods_RunnerTests.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 113D0726724AC4277B773891 /* Pods_RunnerTests.framework */; };
 		4EF7BF0848BD4A0A68FDC275 /* Pods_Runner.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 29626FACEB9B068D1A4ADB29 /* Pods_Runner.framework */; };
 /* End PBXBuildFile section */
@@ -74,6 +77,9 @@
 		33CC10F22044A3C60003C045 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; name = Assets.xcassets; path = Runner/Assets.xcassets; sourceTree = "<group>"; };
 		33CC10F52044A3C60003C045 /* Base */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = Base; path = Base.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		33CC10F72044A3C60003C045 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; name = Info.plist; path = Runner/Info.plist; sourceTree = "<group>"; };
+		A0B1C2D3E4F5060708090A01 /* alarm_classic.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = alarm_classic.wav; path = Runner/alarm_classic.wav; sourceTree = "<group>"; };
+		A0B1C2D3E4F5060708090A02 /* alarm_pulse.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = alarm_pulse.wav; path = Runner/alarm_pulse.wav; sourceTree = "<group>"; };
+		A0B1C2D3E4F5060708090A03 /* alarm_chime.wav */ = {isa = PBXFileReference; lastKnownFileType = audio.wav; name = alarm_chime.wav; path = Runner/alarm_chime.wav; sourceTree = "<group>"; };
 		33CC11122044BFA00003C045 /* MainFlutterWindow.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MainFlutterWindow.swift; sourceTree = "<group>"; };
 		33CEB47222A05771004F2AC0 /* Flutter-Debug.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Debug.xcconfig"; sourceTree = "<group>"; };
 		33CEB47422A05771004F2AC0 /* Flutter-Release.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = "Flutter-Release.xcconfig"; sourceTree = "<group>"; };
@@ -153,6 +159,9 @@
 		33CC11242044D66E0003C045 /* Resources */ = {
 			isa = PBXGroup;
 			children = (
+				A0B1C2D3E4F5060708090A01 /* alarm_classic.wav */,
+				A0B1C2D3E4F5060708090A02 /* alarm_pulse.wav */,
+				A0B1C2D3E4F5060708090A03 /* alarm_chime.wav */,
 				33CC10F22044A3C60003C045 /* Assets.xcassets */,
 				33CC10F42044A3C60003C045 /* MainMenu.xib */,
 				33CC10F72044A3C60003C045 /* Info.plist */,
@@ -314,6 +323,9 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				A0B1C2D3E4F5060708090A11 /* alarm_classic.wav in Resources */,
+				A0B1C2D3E4F5060708090A12 /* alarm_pulse.wav in Resources */,
+				A0B1C2D3E4F5060708090A13 /* alarm_chime.wav in Resources */,
 				33CC10F32044A3C60003C045 /* Assets.xcassets in Resources */,
 				33CC10F62044A3C60003C045 /* MainMenu.xib in Resources */,
 			);

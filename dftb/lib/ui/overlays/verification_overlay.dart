@@ -2,8 +2,11 @@ import 'dart:async';
 import 'dart:ui';
 
 import 'package:flutter/material.dart';
+import 'package:audio_session/audio_session.dart';
+import 'package:flutter_soloud/flutter_soloud.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
+import '../../models/alarm_tone.dart';
 import '../../models/notification_models.dart';
 import '../../models/routine_copy.dart';
 import '../../models/verification_method.dart';
@@ -18,8 +21,13 @@ class VerificationOverlay extends StatefulWidget {
     required this.isAlarmMode,
     required this.routinePhase,
     required this.method,
+    required this.alarmTone,
+    this.supportsSnooze = false,
+    this.canSnooze = false,
+    this.snoozeLabel,
     required this.onSuccess,
     required this.onDismiss,
+    this.onSnooze,
     this.onFailure,
     this.onCancel,
   });
@@ -28,8 +36,13 @@ class VerificationOverlay extends StatefulWidget {
   final bool isAlarmMode;
   final RoutinePhase routinePhase;
   final VerificationMethod method;
+  final AlarmTone alarmTone;
+  final bool supportsSnooze;
+  final bool canSnooze;
+  final String? snoozeLabel;
   final VoidCallback onSuccess;
   final VoidCallback onDismiss;
+  final VoidCallback? onSnooze;
   final ValueChanged<VerificationFailureReason>? onFailure;
   final VoidCallback? onCancel;
 
@@ -41,15 +54,23 @@ class _VerificationOverlayState extends State<VerificationOverlay>
     with SingleTickerProviderStateMixin {
   _OverlayStep _step = _OverlayStep.alarm;
   late final AnimationController _manualController;
+  late final SoLoud _soloud;
   Timer? _scanTimer;
   bool _cameraActive = false;
   bool _isClosing = false;
+  bool _alarmSoundActive = false;
+  AlarmTone? _alarmSoundTone;
+  AudioSource? _alarmSource;
+  SoundHandle? _alarmHandle;
+  int _alarmSessionToken = 0;
+  Future<void>? _soloudInitFuture;
 
   RoutineCopy get _routineCopy => RoutineCopy.forPhase(widget.routinePhase);
 
   @override
   void initState() {
     super.initState();
+    _soloud = SoLoud.instance;
     _manualController =
         AnimationController(
           vsync: this,
@@ -59,6 +80,7 @@ class _VerificationOverlayState extends State<VerificationOverlay>
             _completeVerification();
           }
         });
+    _syncAlarmSound();
   }
 
   @override
@@ -67,12 +89,19 @@ class _VerificationOverlayState extends State<VerificationOverlay>
     if (widget.isOpen && !oldWidget.isOpen) {
       _resetForOpen();
     }
+    if (widget.isOpen != oldWidget.isOpen ||
+        widget.isAlarmMode != oldWidget.isAlarmMode ||
+        widget.alarmTone != oldWidget.alarmTone) {
+      _syncAlarmSound();
+    }
   }
 
   @override
   void dispose() {
     _manualController.dispose();
     _scanTimer?.cancel();
+    _stopAlarmSound();
+    _disposeAlarmSource();
     super.dispose();
   }
 
@@ -85,7 +114,115 @@ class _VerificationOverlayState extends State<VerificationOverlay>
     if (_step == _OverlayStep.verify) {
       _startAutoScanIfNeeded();
     }
+    _syncAlarmSound();
     setState(() {});
+  }
+
+  void _syncAlarmSound() {
+    final shouldPlay = widget.isOpen && widget.isAlarmMode;
+    if (!shouldPlay) {
+      _stopAlarmSound();
+      return;
+    }
+    if (!_alarmSoundActive || _alarmSoundTone != widget.alarmTone) {
+      unawaited(_startAlarmSound(widget.alarmTone));
+    }
+  }
+
+  Future<void> _startAlarmSound(AlarmTone tone) async {
+    final token = ++_alarmSessionToken;
+    final sessionReady = await _ensureAudioSessionActive();
+    if (!sessionReady) return;
+    final ready = await _ensureSoloud();
+    if (!ready) return;
+    final previousTone = _alarmSoundTone;
+    _alarmSoundActive = true;
+    await _stopAlarmSoundInternal(deactivate: false);
+    if (token != _alarmSessionToken) return;
+    if (_alarmSource == null || previousTone != tone) {
+      await _disposeAlarmSource();
+      try {
+        _alarmSource = await _soloud.loadAsset(tone.assetPath);
+      } on SoLoudTemporaryFolderFailedException {
+        final reinit = await _ensureSoloud(force: true);
+        if (!reinit) return;
+        _alarmSource = await _soloud.loadAsset(tone.assetPath);
+      }
+    }
+    _alarmSoundTone = tone;
+    _alarmHandle = await _soloud.play(
+      _alarmSource!,
+      looping: true,
+      volume: 1.0,
+    );
+  }
+
+  void _stopAlarmSound() {
+    if (!_alarmSoundActive) return;
+    _alarmSoundActive = false;
+    final token = ++_alarmSessionToken;
+    unawaited(_stopAlarmSoundInternal(deactivate: true, token: token));
+  }
+
+  Future<void> _stopAlarmSoundInternal({
+    required bool deactivate,
+    int? token,
+  }) async {
+    if (!_soloud.isInitialized) return;
+    final handle = _alarmHandle;
+    if (handle != null) {
+      _alarmHandle = null;
+      try {
+        await _soloud.stop(handle);
+      } catch (_) {}
+    }
+    if (!deactivate) return;
+    if (token != null && token != _alarmSessionToken) return;
+    try {
+      final session = await AudioSession.instance;
+      await session.setActive(false);
+    } catch (_) {}
+  }
+
+  Future<void> _disposeAlarmSource() async {
+    final source = _alarmSource;
+    _alarmSource = null;
+    if (source == null) return;
+    if (!_soloud.isInitialized) return;
+    try {
+      await _soloud.disposeSource(source);
+    } catch (_) {}
+  }
+
+  Future<bool> _ensureSoloud({bool force = false}) async {
+    if (!force && _soloud.isInitialized) return true;
+    if (_soloudInitFuture != null) {
+      try {
+        await _soloudInitFuture;
+      } catch (_) {}
+      return _soloud.isInitialized;
+    }
+    final completer = Completer<void>();
+    _soloudInitFuture = completer.future;
+    try {
+      await _soloud.init();
+      completer.complete();
+    } catch (error) {
+      completer.completeError(error);
+      return false;
+    } finally {
+      _soloudInitFuture = null;
+    }
+    return _soloud.isInitialized;
+  }
+
+  Future<bool> _ensureAudioSessionActive() async {
+    try {
+      final session = await AudioSession.instance;
+      return await session.setActive(true);
+    } catch (_) {
+      return false;
+    }
   }
 
   void _startAutoScanIfNeeded() {
@@ -98,6 +235,8 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   }
 
   void _completeVerification() {
+    _stopAlarmSound();
+    _alarmSoundTone = null;
     setState(() {
       _step = _OverlayStep.success;
       _isClosing = false;
@@ -675,18 +814,36 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   }
 
   Widget _buildAlarmFooter() {
-    return TextButton(
-      onPressed: () {
-        widget.onCancel?.call();
-        widget.onDismiss();
-      },
-      style: TextButton.styleFrom(
-        foregroundColor: Colors.white.withValues(alpha: 0.75),
-      ),
-      child: Text(
-        _routineCopy.alarm.skipLabel,
-        style: const TextStyle(fontWeight: FontWeight.w600),
-      ),
+    final snoozeLabel = widget.snoozeLabel ?? 'Snooze';
+    return Column(
+      children: [
+        if (widget.supportsSnooze) ...[
+          shadcn.Button.ghost(
+            onPressed: widget.canSnooze
+                ? () {
+                    _stopAlarmSound();
+                    widget.onSnooze?.call();
+                  }
+                : null,
+            child: Text(snoozeLabel),
+          ),
+          const SizedBox(height: 8),
+        ],
+        TextButton(
+          onPressed: () {
+            _stopAlarmSound();
+            widget.onCancel?.call();
+            widget.onDismiss();
+          },
+          style: TextButton.styleFrom(
+            foregroundColor: Colors.white.withValues(alpha: 0.75),
+          ),
+          child: Text(
+            _routineCopy.alarm.skipLabel,
+            style: const TextStyle(fontWeight: FontWeight.w600),
+          ),
+        ),
+      ],
     );
   }
 
@@ -911,6 +1068,18 @@ class _VerificationOverlayState extends State<VerificationOverlay>
     if (_step == _OverlayStep.verify && widget.isAlarmMode) {
       return Column(
         children: [
+          if (widget.supportsSnooze) ...[
+            shadcn.Button.ghost(
+              onPressed: widget.canSnooze
+                  ? () {
+                      _stopAlarmSound();
+                      widget.onSnooze?.call();
+                    }
+                  : null,
+              child: Text(widget.snoozeLabel ?? 'Snooze'),
+            ),
+            const SizedBox(height: 6),
+          ],
           shadcn.Button.ghost(
             onPressed: () {
               setState(() {
@@ -923,6 +1092,7 @@ class _VerificationOverlayState extends State<VerificationOverlay>
           shadcn.Button.ghost(
             onPressed: () {
               widget.onCancel?.call();
+              _stopAlarmSound();
               widget.onDismiss();
             },
             child: const Text('Skip / Emergency Dismiss'),

@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/foundation.dart';
 
+import '../models/alarm_tone.dart';
 import '../models/app_mode.dart';
 import '../models/brush_session.dart';
 import '../models/notification_models.dart';
@@ -30,6 +31,7 @@ class AppState extends ChangeNotifier {
   bool _sleepModeActive = false;
   bool _isDeveloperMode = false;
   String? _activeWindowId;
+  AlarmState? _alarmState;
 
   UserSettings get settings => _settings;
   bool get isReady => _isReady;
@@ -44,6 +46,26 @@ class AppState extends ChangeNotifier {
   bool get isDeveloperMode => _isDeveloperMode;
 
   bool get isBrushedTonight => _settings.lastBrushDate == _todayKey();
+  bool get supportsSnooze => _snoozeConfigFor(_settings.mode) != null;
+  bool get canSnooze => snoozeRemaining > 0;
+  int get snoozeRemaining {
+    final config = _snoozeConfigFor(_settings.mode);
+    if (config == null) return 0;
+    final used = _alarmState?.snoozeCount ?? 0;
+    final remaining = config.maxCount - used;
+    return remaining.clamp(0, config.maxCount).toInt();
+  }
+
+  Duration? get snoozeDuration => _snoozeConfigFor(_settings.mode)?.duration;
+  String? get snoozeLabel {
+    final config = _snoozeConfigFor(_settings.mode);
+    if (config == null) return null;
+    if (snoozeRemaining <= 0) {
+      return 'No snoozes left';
+    }
+    final minutes = config.duration.inMinutes;
+    return 'Snooze $minutes min ($snoozeRemaining left)';
+  }
 
   Future<void> load() async {
     _settings = await _store.loadSettings();
@@ -104,8 +126,16 @@ class AppState extends ChangeNotifier {
     notifyListeners();
   }
 
+  void updateAlarmTone(AlarmTone tone) {
+    _settings = _settings.copyWith(alarmTone: tone);
+    _persist();
+    unawaited(_refreshSchedule());
+    notifyListeners();
+  }
+
   Future<void> markBrushed({bool wasLate = false}) async {
     final completionTime = DateTime.now();
+    final windowId = _activeWindowId;
     await _recordVerificationSuccess(completionTime);
     final late = wasLate || _isLateCompletion(completionTime);
     await _sessions.addSession(
@@ -139,7 +169,11 @@ class AppState extends ChangeNotifier {
     _activeRoutinePhase = null;
     _sleepModeActive = false;
     _activeWindowId = null;
+    _alarmState = null;
     _persist();
+    if (windowId != null) {
+      await _notifications.clearAlarmState(windowId);
+    }
     await _scheduler.cancelAll();
     await _refreshSchedule();
     notifyListeners();
@@ -150,6 +184,7 @@ class AppState extends ChangeNotifier {
     _isAlarmMode = true;
     _activeRoutinePhase =
         _routinePhaseOverride ?? _routinePhaseFor(DateTime.now());
+    unawaited(_setAlarmState(AlarmStatus.ringing));
     notifyListeners();
   }
 
@@ -221,6 +256,7 @@ class AppState extends ChangeNotifier {
     _routinePhaseOverride = null;
     _sleepModeActive = false;
     _activeWindowId = null;
+    _alarmState = null;
     await _scheduler.cancelAll();
     notifyListeners();
   }
@@ -236,7 +272,7 @@ class AppState extends ChangeNotifier {
   }
 
   Future<void> scheduleTestAlarm() async {
-    await _scheduler.scheduleTestAlarm();
+    await _scheduler.scheduleTestAlarm(tone: _settings.alarmTone);
   }
 
   Future<void> showTestNotification() async {
@@ -249,6 +285,33 @@ class AppState extends ChangeNotifier {
 
   Future<void> cancelAllNotifications() async {
     await _scheduler.cancelAll();
+  }
+
+  Future<void> snoozeAlarm() async {
+    final config = _snoozeConfigFor(_settings.mode);
+    final windowId = _activeWindowId;
+    if (config == null || windowId == null) return;
+    if (snoozeRemaining <= 0) return;
+
+    final nextCount = (_alarmState?.snoozeCount ?? 0) + 1;
+    final state = AlarmState(
+      windowId: windowId,
+      status: AlarmStatus.snoozed,
+      snoozeCount: nextCount,
+      lastChangedAt: DateTime.now(),
+    );
+    _alarmState = state;
+    await _notifications.upsertAlarmState(state);
+
+    closeAlarm();
+    await _scheduler.cancelAlarmNotification();
+    final schedule = await _scheduler.scheduleSnoozeAlarm(
+      windowId: windowId,
+      mode: _settings.mode,
+      tone: _settings.alarmTone,
+      delay: config.duration,
+    );
+    await _notifications.insertSchedule(schedule);
   }
 
   void _handleNotificationTap(String? payload) {
@@ -378,6 +441,41 @@ class AppState extends ChangeNotifier {
     );
   }
 
+  _SnoozeConfig? _snoozeConfigFor(AppMode mode) {
+    switch (mode) {
+      case AppMode.gentle:
+        return null;
+      case AppMode.accountability:
+        return const _SnoozeConfig(
+          maxCount: 2,
+          duration: Duration(minutes: 5),
+        );
+      case AppMode.noExcuses:
+        return const _SnoozeConfig(
+          maxCount: 1,
+          duration: Duration(minutes: 3),
+        );
+    }
+  }
+
+  Future<void> _setAlarmState(AlarmStatus status) async {
+    final windowId = _activeWindowId;
+    if (windowId == null) return;
+    var current = _alarmState;
+    if (current == null || current.windowId != windowId) {
+      current = await _notifications.fetchAlarmState(windowId);
+    }
+    final next = AlarmState(
+      windowId: windowId,
+      status: status,
+      snoozeCount: current?.snoozeCount ?? 0,
+      lastChangedAt: DateTime.now(),
+    );
+    _alarmState = next;
+    await _notifications.upsertAlarmState(next);
+    notifyListeners();
+  }
+
   bool _isLateCompletion(DateTime time) {
     final window = _bedtimeWindowFor(time);
     return time.isAfter(window.end);
@@ -430,4 +528,11 @@ class _BedtimeWindow {
 
   final DateTime start;
   final DateTime end;
+}
+
+class _SnoozeConfig {
+  const _SnoozeConfig({required this.maxCount, required this.duration});
+
+  final int maxCount;
+  final Duration duration;
 }

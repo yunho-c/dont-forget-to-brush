@@ -64,12 +64,43 @@ class NotificationRepository {
     );
   }
 
+  Future<void> insertSchedule(NotificationSchedule schedule) async {
+    final db = await _databaseService.database;
+    await db.insert(
+      'notification_schedules',
+      schedule.toMap(),
+      conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
   Future<void> upsertAlarmState(AlarmState state) async {
     final db = await _databaseService.database;
     await db.insert(
       'alarm_states',
       state.toMap(),
       conflictAlgorithm: ConflictAlgorithm.replace,
+    );
+  }
+
+  Future<AlarmState?> fetchAlarmState(String windowId) async {
+    final db = await _databaseService.database;
+    final rows = await db.query(
+      'alarm_states',
+      where: 'window_id = ?',
+      whereArgs: [windowId],
+      orderBy: 'last_changed_at DESC',
+      limit: 1,
+    );
+    if (rows.isEmpty) return null;
+    return AlarmState.fromMap(rows.first);
+  }
+
+  Future<void> clearAlarmState(String windowId) async {
+    final db = await _databaseService.database;
+    await db.delete(
+      'alarm_states',
+      where: 'window_id = ?',
+      whereArgs: [windowId],
     );
   }
 
