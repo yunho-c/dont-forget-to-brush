@@ -6,6 +6,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../models/app_mode.dart';
 import '../../models/notification_models.dart';
+import '../../models/routine_copy.dart';
 import '../../models/verification_method.dart';
 import '../../state/app_state_provider.dart';
 import '../../theme/app_colors.dart';
@@ -311,6 +312,17 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                 ),
                 const Divider(height: 1, color: AppColors.night700),
                 _SettingsRow(
+                  icon: Icons.wb_sunny_outlined,
+                  label: 'Routine Phase',
+                  trailing: _RoutinePhaseToggle(
+                    selected: state.routinePhase,
+                    onSelected: (phase) {
+                      state.setRoutinePhaseOverride(phase);
+                    },
+                  ),
+                ),
+                const Divider(height: 1, color: AppColors.night700),
+                _SettingsRow(
                   icon: Icons.notifications,
                   label: 'Test Reminder Notification',
                   value: 'in 10s',
@@ -499,6 +511,46 @@ class _SettingsRow extends StatelessWidget {
     }
 
     return InkWell(onTap: onTap, child: content);
+  }
+}
+
+class _RoutinePhaseToggle extends StatelessWidget {
+  const _RoutinePhaseToggle({
+    required this.selected,
+    required this.onSelected,
+  });
+
+  final RoutinePhase selected;
+  final ValueChanged<RoutinePhase> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final options = RoutinePhase.values;
+    return ToggleButtons(
+      isSelected: options.map((phase) => phase == selected).toList(),
+      onPressed: (index) => onSelected(options[index]),
+      borderRadius: BorderRadius.circular(12),
+      constraints: const BoxConstraints(minHeight: 32, minWidth: 72),
+      color: AppColors.slate400,
+      selectedColor: Colors.white,
+      fillColor: AppColors.indigo500,
+      borderColor: AppColors.night700,
+      selectedBorderColor: AppColors.indigo500,
+      children: options
+          .map(
+            (phase) => Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 6),
+              child: Text(
+                phase.label,
+                style: const TextStyle(
+                  fontSize: 12,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ),
+          )
+          .toList(),
+    );
   }
 }
 

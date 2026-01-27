@@ -25,6 +25,8 @@ class AppState extends ChangeNotifier {
   bool _isReady = false;
   bool _isAlarmOpen = false;
   bool _isAlarmMode = false;
+  RoutinePhase? _activeRoutinePhase;
+  RoutinePhase? _routinePhaseOverride;
   bool _sleepModeActive = false;
   bool _isDeveloperMode = false;
   String? _activeWindowId;
@@ -33,7 +35,11 @@ class AppState extends ChangeNotifier {
   bool get isReady => _isReady;
   bool get isAlarmOpen => _isAlarmOpen;
   bool get isAlarmMode => _isAlarmMode;
-  RoutinePhase get routinePhase => _routinePhaseFor(DateTime.now());
+  RoutinePhase get routinePhase =>
+      _activeRoutinePhase ??
+      _routinePhaseOverride ??
+      _routinePhaseFor(DateTime.now());
+  RoutinePhase? get routinePhaseOverride => _routinePhaseOverride;
   bool get sleepModeActive => _sleepModeActive;
   bool get isDeveloperMode => _isDeveloperMode;
 
@@ -130,6 +136,7 @@ class AppState extends ChangeNotifier {
     );
     _isAlarmOpen = false;
     _isAlarmMode = false;
+    _activeRoutinePhase = null;
     _sleepModeActive = false;
     _activeWindowId = null;
     _persist();
@@ -141,12 +148,15 @@ class AppState extends ChangeNotifier {
   void openAlarm() {
     _isAlarmOpen = true;
     _isAlarmMode = true;
+    _activeRoutinePhase =
+        _routinePhaseOverride ?? _routinePhaseFor(DateTime.now());
     notifyListeners();
   }
 
   void closeAlarm() {
     _isAlarmOpen = false;
     _isAlarmMode = false;
+    _activeRoutinePhase = null;
     notifyListeners();
   }
 
@@ -181,6 +191,16 @@ class AppState extends ChangeNotifier {
   void openVerification() {
     _isAlarmOpen = true;
     _isAlarmMode = false;
+    _activeRoutinePhase =
+        _routinePhaseOverride ?? _routinePhaseFor(DateTime.now());
+    notifyListeners();
+  }
+
+  void setRoutinePhaseOverride(RoutinePhase? phase) {
+    _routinePhaseOverride = phase;
+    if (_isAlarmOpen) {
+      _activeRoutinePhase = phase ?? _routinePhaseFor(DateTime.now());
+    }
     notifyListeners();
   }
 
@@ -197,6 +217,8 @@ class AppState extends ChangeNotifier {
     _settings = UserSettings.defaults();
     _isAlarmOpen = false;
     _isAlarmMode = false;
+    _activeRoutinePhase = null;
+    _routinePhaseOverride = null;
     _sleepModeActive = false;
     _activeWindowId = null;
     await _scheduler.cancelAll();
