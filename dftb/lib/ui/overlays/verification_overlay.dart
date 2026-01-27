@@ -135,11 +135,32 @@ class _VerificationOverlayState extends State<VerificationOverlay>
     }
 
     final isAlarm = widget.isAlarmMode;
-    final background = _step == _OverlayStep.success
-        ? AppColors.green500
-        : isAlarm
-        ? AppColors.red600
-        : AppColors.night900;
+    final background =
+        _step == _OverlayStep.success ? AppColors.green500 : AppColors.night900;
+
+    if (isAlarm && _step != _OverlayStep.success) {
+      return Material(
+        color: Colors.transparent,
+        child: Stack(
+          children: [
+            _buildAlarmBackground(),
+            SafeArea(
+              child: Padding(
+                padding: const EdgeInsets.all(24),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    _buildHeader(isAlarm),
+                    Expanded(child: _buildBody()),
+                    _buildFooter(),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
 
     return Material(
       color: background,
@@ -209,33 +230,47 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   }
 
   Widget _buildAlarmBackground() {
+    final isNight = widget.routinePhase == RoutinePhase.night;
+    final primaryOrbColor =
+        isNight ? AppColors.indigo500 : AppColors.orange400;
+    final secondaryOrbColor =
+        isNight ? AppColors.emerald400 : AppColors.indigo500;
+    final primaryIntensity = isNight ? 0.45 : 0.5;
+    final secondaryIntensity = isNight ? 0.4 : 0.35;
+    final gradient = LinearGradient(
+      begin: Alignment.topLeft,
+      end: Alignment.bottomRight,
+      colors: isNight
+          ? const [
+              Color(0xFF0B1026),
+              Color(0xFF101B3D),
+              Color(0xFF1F1B4A),
+              Color(0xFF0E3A4C),
+            ]
+          : const [
+              AppColors.night900,
+              Color(0xFF1B2140),
+              Color(0xFF3A1C2E),
+              AppColors.orange400,
+            ],
+      stops: const [0, 0.35, 0.7, 1],
+    );
+
     return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            AppColors.night900,
-            Color(0xFF1B2140),
-            Color(0xFF3A1C2E),
-            AppColors.orange400,
-          ],
-          stops: [0, 0.35, 0.7, 1],
-        ),
-      ),
+      decoration: BoxDecoration(gradient: gradient),
       child: Stack(
         children: [
           _buildGlowOrb(
             alignment: const Alignment(-0.9, -0.8),
             size: 280,
-            color: AppColors.orange400,
-            intensity: 0.5,
+            color: primaryOrbColor,
+            intensity: primaryIntensity,
           ),
           _buildGlowOrb(
             alignment: const Alignment(0.9, 0.9),
             size: 360,
-            color: AppColors.indigo500,
-            intensity: 0.35,
+            color: secondaryOrbColor,
+            intensity: secondaryIntensity,
           ),
           Align(
             alignment: Alignment.bottomCenter,
@@ -336,6 +371,17 @@ class _VerificationOverlayState extends State<VerificationOverlay>
         break;
     }
 
+    final heroIcon = widget.routinePhase == RoutinePhase.night
+        ? Icons.nightlight_round
+        : Icons.wb_sunny_outlined;
+
+    final isNight = widget.routinePhase == RoutinePhase.night;
+    final heroGradient = isNight
+        ? const [AppColors.indigo500, Color(0xFF0F766E)]
+        : const [AppColors.orange400, AppColors.red500];
+    final heroGlow =
+        isNight ? AppColors.indigo500 : AppColors.orange400;
+
     return _buildGlassCard(
       child: Padding(
         padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 28),
@@ -350,24 +396,17 @@ class _VerificationOverlayState extends State<VerificationOverlay>
                 gradient: LinearGradient(
                   begin: Alignment.topLeft,
                   end: Alignment.bottomRight,
-                  colors: [
-                    AppColors.orange400.withValues(alpha: 0.9),
-                    AppColors.red500,
-                  ],
+                  colors: heroGradient,
                 ),
                 boxShadow: [
                   BoxShadow(
-                    color: AppColors.orange400.withValues(alpha: 0.45),
+                    color: heroGlow.withValues(alpha: 0.45),
                     blurRadius: 24,
                     offset: const Offset(0, 10),
                   ),
                 ],
               ),
-              child: const Icon(
-                Icons.wb_sunny_outlined,
-                color: Colors.white,
-                size: 34,
-              ),
+              child: Icon(heroIcon, color: Colors.white, size: 34),
             ),
             const SizedBox(height: 18),
             Text(
