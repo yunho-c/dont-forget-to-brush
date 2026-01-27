@@ -69,6 +69,7 @@ class _HomeShellState extends ConsumerState<HomeShell>
             VerificationOverlay(
               isOpen: state.isAlarmOpen,
               isAlarmMode: state.isAlarmMode,
+              routinePhase: state.routinePhase,
               method: state.settings.verificationMethod,
               onSuccess: () => unawaited(state.markBrushed()),
               onDismiss: state.closeAlarm,

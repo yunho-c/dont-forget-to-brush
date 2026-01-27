@@ -5,6 +5,7 @@ import 'package:flutter/foundation.dart';
 import '../models/app_mode.dart';
 import '../models/brush_session.dart';
 import '../models/notification_models.dart';
+import '../models/routine_copy.dart';
 import '../models/user_settings.dart';
 import '../models/verification_method.dart';
 import '../services/notification_repository.dart';
@@ -32,6 +33,7 @@ class AppState extends ChangeNotifier {
   bool get isReady => _isReady;
   bool get isAlarmOpen => _isAlarmOpen;
   bool get isAlarmMode => _isAlarmMode;
+  RoutinePhase get routinePhase => _routinePhaseFor(DateTime.now());
   bool get sleepModeActive => _sleepModeActive;
   bool get isDeveloperMode => _isDeveloperMode;
 
@@ -155,6 +157,11 @@ class AppState extends ChangeNotifier {
     if (shouldReschedule) {
       await _refreshSchedule();
     }
+    await _syncActiveDeliveries();
+  }
+
+  Future<void> syncNotificationDeliveries() async {
+    if (!_isReady) return;
     await _syncActiveDeliveries();
   }
 
@@ -361,6 +368,12 @@ class AppState extends ChangeNotifier {
       end = end.add(const Duration(days: 1));
     }
     return _BedtimeWindow(start, end);
+  }
+
+  RoutinePhase _routinePhaseFor(DateTime time) {
+    final window = _bedtimeWindowFor(time);
+    final isNight = !time.isBefore(window.start) && time.isBefore(window.end);
+    return isNight ? RoutinePhase.night : RoutinePhase.morning;
   }
 
   DateTime _timeOnDate(String raw, DateTime date) {

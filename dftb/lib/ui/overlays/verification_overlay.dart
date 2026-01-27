@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../models/notification_models.dart';
+import '../../models/routine_copy.dart';
 import '../../models/verification_method.dart';
 import '../../theme/app_colors.dart';
 
@@ -15,6 +16,7 @@ class VerificationOverlay extends StatefulWidget {
     super.key,
     required this.isOpen,
     required this.isAlarmMode,
+    required this.routinePhase,
     required this.method,
     required this.onSuccess,
     required this.onDismiss,
@@ -24,6 +26,7 @@ class VerificationOverlay extends StatefulWidget {
 
   final bool isOpen;
   final bool isAlarmMode;
+  final RoutinePhase routinePhase;
   final VerificationMethod method;
   final VoidCallback onSuccess;
   final VoidCallback onDismiss;
@@ -40,6 +43,8 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   late final AnimationController _manualController;
   Timer? _scanTimer;
   bool _cameraActive = false;
+
+  RoutineCopy get _routineCopy => RoutineCopy.forPhase(widget.routinePhase);
 
   @override
   void initState() {
@@ -293,12 +298,12 @@ class _VerificationOverlayState extends State<VerificationOverlay>
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
-          children: const [
-            Icon(Icons.alarm_rounded, size: 16, color: Colors.white70),
-            SizedBox(width: 8),
+          children: [
+            const Icon(Icons.alarm_rounded, size: 16, color: Colors.white70),
+            const SizedBox(width: 8),
             Text(
-              'Morning check-in',
-              style: TextStyle(
+              _routineCopy.alarm.pill,
+              style: const TextStyle(
                 fontSize: 12,
                 fontWeight: FontWeight.w600,
                 letterSpacing: 1.2,
@@ -312,25 +317,22 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   }
 
   Widget _buildAlarmHeroCard() {
+    final methodCopy = _routineCopy.methods;
     IconData methodIcon = Icons.timer_rounded;
-    String methodTitle = 'Hold to verify';
-    String methodHint = 'Keep pressure steady until it completes.';
+    MethodChipCopy chipCopy = methodCopy.manual;
 
     switch (widget.method) {
       case VerificationMethod.manual:
         methodIcon = Icons.timer_rounded;
-        methodTitle = 'Hold to verify';
-        methodHint = 'Keep pressure steady until it completes.';
+        chipCopy = methodCopy.manual;
         break;
       case VerificationMethod.nfc:
         methodIcon = Icons.nfc;
-        methodTitle = 'Tap your tag';
-        methodHint = 'Hold your device near the NFC tag.';
+        chipCopy = methodCopy.nfc;
         break;
       case VerificationMethod.selfie:
         methodIcon = Icons.camera_alt_outlined;
-        methodTitle = 'Take a selfie';
-        methodHint = 'Frame your face inside the guide.';
+        chipCopy = methodCopy.selfie;
         break;
     }
 
@@ -368,14 +370,14 @@ class _VerificationOverlayState extends State<VerificationOverlay>
               ),
             ),
             const SizedBox(height: 18),
-            const Text(
-              'Wake up and brush',
+            Text(
+              _routineCopy.alarm.title,
               textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
+              style: const TextStyle(fontSize: 30, fontWeight: FontWeight.w700),
             ),
             const SizedBox(height: 10),
             Text(
-              'Start the day with a real check-in to protect your streak.',
+              _routineCopy.alarm.body,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 15,
@@ -384,10 +386,10 @@ class _VerificationOverlayState extends State<VerificationOverlay>
               ),
             ),
             const SizedBox(height: 18),
-            _buildMethodChip(methodIcon, methodTitle),
+            _buildMethodChip(methodIcon, chipCopy.alarmLabel),
             const SizedBox(height: 8),
             Text(
-              methodHint,
+              chipCopy.alarmHint,
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 12,
@@ -452,19 +454,22 @@ class _VerificationOverlayState extends State<VerificationOverlay>
             ),
           ],
         ),
-        child: const Padding(
-          padding: EdgeInsets.symmetric(vertical: 18),
+        child: Padding(
+          padding: const EdgeInsets.symmetric(vertical: 18),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
               Text(
-                "I'm up",
-                style: TextStyle(fontSize: 22, fontWeight: FontWeight.w700),
+                _routineCopy.alarm.ctaTitle,
+                style: const TextStyle(
+                  fontSize: 22,
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-              SizedBox(height: 2),
+              const SizedBox(height: 2),
               Text(
-                'Start check-in',
-                style: TextStyle(fontSize: 13, color: Colors.white70),
+                _routineCopy.alarm.ctaSubtitle,
+                style: const TextStyle(fontSize: 13, color: Colors.white70),
               ),
             ],
           ),
@@ -482,9 +487,9 @@ class _VerificationOverlayState extends State<VerificationOverlay>
       style: TextButton.styleFrom(
         foregroundColor: Colors.white.withValues(alpha: 0.75),
       ),
-      child: const Text(
-        'Skip for now',
-        style: TextStyle(fontWeight: FontWeight.w600),
+      child: Text(
+        _routineCopy.alarm.skipLabel,
+        style: const TextStyle(fontWeight: FontWeight.w600),
       ),
     );
   }
@@ -520,22 +525,26 @@ class _VerificationOverlayState extends State<VerificationOverlay>
 
   Widget _buildHeader(bool isAlarm) {
     if (_step == _OverlayStep.success) {
-      return const SizedBox(
+      return SizedBox(
         width: double.infinity,
         child: Column(
           children: [
-            Icon(Icons.check_circle, size: 72, color: AppColors.green500),
-            SizedBox(height: 12),
-            Text(
-              'Tonight Complete!',
-              textAlign: TextAlign.center,
-              style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+            const Icon(
+              Icons.check_circle,
+              size: 72,
+              color: AppColors.green500,
             ),
-            SizedBox(height: 6),
+            const SizedBox(height: 12),
             Text(
-              'Sleep well.',
+              _routineCopy.success.title,
               textAlign: TextAlign.center,
-              style: TextStyle(color: AppColors.slate300),
+              style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              _routineCopy.success.subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(color: AppColors.slate300),
             ),
           ],
         ),
@@ -551,21 +560,21 @@ class _VerificationOverlayState extends State<VerificationOverlay>
               color: Colors.white.withValues(alpha: 0.12),
               borderRadius: BorderRadius.circular(999),
             ),
-            child: const Text(
-              'Alarm Active',
-              style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
+            child: Text(
+              _routineCopy.verify.alarmBadge,
+              style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600),
             ),
           ),
         const SizedBox(height: 16),
-        const Text(
-          'Brush Check',
-          style: TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
+        Text(
+          _routineCopy.verify.title,
+          style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
-        const Text(
-          "Let's finish the day strong.",
+        Text(
+          _routineCopy.verify.subtitle,
           textAlign: TextAlign.center,
-          style: TextStyle(color: AppColors.slate300),
+          style: const TextStyle(color: AppColors.slate300),
         ),
       ],
     );
@@ -612,9 +621,9 @@ class _VerificationOverlayState extends State<VerificationOverlay>
                           ),
                         ),
                         const SizedBox(height: 8),
-                        const Text(
-                          'Hold',
-                          style: TextStyle(
+                        Text(
+                          _routineCopy.methods.manualVerify.verifyHoldLabel,
+                          style: const TextStyle(
                             color: AppColors.slate300,
                             letterSpacing: 1.2,
                           ),
@@ -633,7 +642,7 @@ class _VerificationOverlayState extends State<VerificationOverlay>
           children: [
             const Icon(Icons.nfc, size: 96, color: AppColors.indigo500),
             const SizedBox(height: 16),
-            const Text('Scanning for tag...'),
+            Text(_routineCopy.methods.nfcVerify.verifyScanningLabel),
             const SizedBox(height: 20),
             shadcn.Button.ghost(
               onPressed: _completeVerification,
@@ -641,7 +650,7 @@ class _VerificationOverlayState extends State<VerificationOverlay>
                 size: shadcn.ButtonSize.small,
                 density: shadcn.ButtonDensity.compact,
               ),
-              child: const Text('(Simulate Tap)'),
+              child: Text(_routineCopy.methods.nfcVerify.verifySimulateLabel),
             ),
           ],
         );
@@ -663,8 +672,8 @@ class _VerificationOverlayState extends State<VerificationOverlay>
                     Align(
                       alignment: Alignment.center,
                       child: Text(
-                        'Simulating Camera...',
-                        style: TextStyle(color: Colors.white54),
+                        _routineCopy.methods.selfieVerify.verifyCameraLabel,
+                        style: const TextStyle(color: Colors.white54),
                       ),
                     )
                   else
@@ -691,7 +700,7 @@ class _VerificationOverlayState extends State<VerificationOverlay>
                 density: shadcn.ButtonDensity.comfortable,
               ),
               onPressed: _completeVerification,
-              child: const Text('Take Photo'),
+              child: Text(_routineCopy.methods.selfieVerify.verifyCaptureLabel),
             ),
           ],
         );
@@ -731,7 +740,7 @@ class _VerificationOverlayState extends State<VerificationOverlay>
         widget.onCancel?.call();
         widget.onDismiss();
       },
-      child: const Text('Skip for now'),
+      child: Text(_routineCopy.alarm.skipLabel),
     );
   }
 }

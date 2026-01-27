@@ -83,7 +83,7 @@ class NotificationRepository {
   }
 
   Future<List<NotificationSchedule>> fetchRecentSchedules({
-    int limit = 12,
+    int? limit = 12,
   }) async {
     final db = await _databaseService.database;
     final rows = await db.query(
@@ -95,7 +95,7 @@ class NotificationRepository {
   }
 
   Future<List<VerificationAttempt>> fetchRecentVerificationAttempts({
-    int limit = 12,
+    int? limit = 12,
   }) async {
     final db = await _databaseService.database;
     final rows = await db.query(
@@ -107,19 +107,21 @@ class NotificationRepository {
   }
 
   Future<List<NotificationDeliveryView>> fetchRecentDeliveryViews({
-    int limit = 12,
+    int? limit = 12,
   }) async {
     final db = await _databaseService.database;
-    final rows = await db.rawQuery(
-      '''
+    final sql = StringBuffer('''
       SELECT d.*, s.type AS schedule_type
       FROM notification_deliveries d
       LEFT JOIN notification_schedules s ON s.id = d.schedule_id
       ORDER BY d.delivered_at DESC
-      LIMIT ?
-      ''',
-      [limit],
-    );
+    ''');
+    final args = <Object?>[];
+    if (limit != null) {
+      sql.write(' LIMIT ?');
+      args.add(limit);
+    }
+    final rows = await db.rawQuery(sql.toString(), args);
     return rows.map(NotificationDeliveryView.fromMap).toList();
   }
 

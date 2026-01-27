@@ -29,11 +29,15 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     ref.read(appStateProvider).toggleDeveloperMode();
   }
 
-  Future<_NotificationDebugData> _loadNotificationDebugData() async {
+  Future<_NotificationDebugData> _loadNotificationDebugData({
+    bool showAll = false,
+  }) async {
+    await ref.read(appStateProvider).syncNotificationDeliveries();
     final repo = ref.read(notificationRepositoryProvider);
-    final schedules = await repo.fetchRecentSchedules(limit: 8);
-    final attempts = await repo.fetchRecentVerificationAttempts(limit: 8);
-    final deliveries = await repo.fetchRecentDeliveryViews(limit: 8);
+    final limit = showAll ? null : 8;
+    final schedules = await repo.fetchRecentSchedules(limit: limit);
+    final attempts = await repo.fetchRecentVerificationAttempts(limit: limit);
+    final deliveries = await repo.fetchRecentDeliveryViews(limit: limit);
     return _NotificationDebugData(
       schedules: schedules,
       attempts: attempts,
@@ -49,71 +53,93 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
       builder: (context) {
-        return Padding(
-          padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
-          child: FutureBuilder<_NotificationDebugData>(
-            future: _loadNotificationDebugData(),
-            builder: (context, snapshot) {
-              if (snapshot.connectionState != ConnectionState.done) {
-                return const Center(child: CircularProgressIndicator());
-              }
-              final data = snapshot.data ?? _NotificationDebugData.empty();
-              return Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+        var showAll = false;
+        return StatefulBuilder(
+          builder: (context, setModalState) {
+            return Padding(
+              padding: const EdgeInsets.fromLTRB(20, 16, 20, 24),
+              child: FutureBuilder<_NotificationDebugData>(
+                future: _loadNotificationDebugData(showAll: showAll),
+                builder: (context, snapshot) {
+                  if (snapshot.connectionState != ConnectionState.done) {
+                    return const Center(child: CircularProgressIndicator());
+                  }
+                  final data = snapshot.data ?? _NotificationDebugData.empty();
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text(
-                        'Notification Logs',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.w700,
-                        ),
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          const Text(
+                            'Notification Logs',
+                            style: TextStyle(
+                              fontSize: 18,
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                          Row(
+                            children: [
+                              shadcn.Button.ghost(
+                                style: const shadcn.ButtonStyle.ghost(
+                                  size: shadcn.ButtonSize.small,
+                                  density: shadcn.ButtonDensity.compact,
+                                ),
+                                onPressed: () {
+                                  setModalState(() {});
+                                },
+                                child: const Text('Refresh'),
+                              ),
+                              const SizedBox(width: 8),
+                              shadcn.Button.ghost(
+                                style: const shadcn.ButtonStyle.ghost(
+                                  size: shadcn.ButtonSize.small,
+                                  density: shadcn.ButtonDensity.compact,
+                                ),
+                                onPressed: () {
+                                  setModalState(() {
+                                    showAll = !showAll;
+                                  });
+                                },
+                                child: Text(showAll ? 'Show less' : 'Show all'),
+                              ),
+                            ],
+                          ),
+                        ],
                       ),
-                      shadcn.Button.ghost(
-                        style: const shadcn.ButtonStyle.ghost(
-                          size: shadcn.ButtonSize.small,
-                          density: shadcn.ButtonDensity.compact,
+                      const SizedBox(height: 12),
+                      Expanded(
+                        child: ListView(
+                          children: [
+                            _DebugSection(
+                              title: 'Scheduled',
+                              items:
+                                  data.schedules.map(_formatSchedule).toList(),
+                              emptyLabel: 'No recent schedules.',
+                            ),
+                            const SizedBox(height: 16),
+                            _DebugSection(
+                              title: 'Delivered',
+                              items:
+                                  data.deliveries.map(_formatDelivery).toList(),
+                              emptyLabel: 'No delivery logs yet.',
+                            ),
+                            const SizedBox(height: 16),
+                            _DebugSection(
+                              title: 'Verification Attempts',
+                              items:
+                                  data.attempts.map(_formatAttempt).toList(),
+                              emptyLabel: 'No verification attempts yet.',
+                            ),
+                          ],
                         ),
-                        onPressed: () {
-                          Navigator.of(context).pop();
-                          _showNotificationDebugSheet();
-                        },
-                        child: const Text('Refresh'),
                       ),
                     ],
-                  ),
-                  const SizedBox(height: 12),
-                  Expanded(
-                    child: ListView(
-                      children: [
-                        _DebugSection(
-                          title: 'Scheduled',
-                          items: data.schedules.map(_formatSchedule).toList(),
-                          emptyLabel: 'No recent schedules.',
-                        ),
-                        const SizedBox(height: 16),
-                        _DebugSection(
-                          title: 'Delivered',
-                          items: data.deliveries
-                              .map(_formatDelivery)
-                              .toList(),
-                          emptyLabel: 'No delivery logs yet.',
-                        ),
-                        const SizedBox(height: 16),
-                        _DebugSection(
-                          title: 'Verification Attempts',
-                          items: data.attempts.map(_formatAttempt).toList(),
-                          emptyLabel: 'No verification attempts yet.',
-                        ),
-                      ],
-                    ),
-                  ),
-                ],
-              );
-            },
-          ),
+                  );
+                },
+              ),
+            );
+          },
         );
       },
     );
