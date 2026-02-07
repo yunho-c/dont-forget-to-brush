@@ -106,8 +106,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      body: AppBackground(
+    return shadcn.Scaffold(
+      child: AppBackground(
         child: SafeArea(
           child: Padding(
             padding: const EdgeInsets.all(24),

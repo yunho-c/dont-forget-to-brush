@@ -2,6 +2,7 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
 import '../../state/app_state_provider.dart';
 import '../overlays/verification_overlay.dart';
@@ -45,8 +46,8 @@ class _HomeShellState extends ConsumerState<HomeShell>
   Widget build(BuildContext context) {
     final state = ref.watch(appStateProvider);
 
-    return Scaffold(
-      body: AppBackground(
+    return shadcn.Scaffold(
+      child: AppBackground(
         child: Stack(
           children: [
             SafeArea(
