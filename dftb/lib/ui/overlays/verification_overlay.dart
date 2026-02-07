@@ -11,6 +11,7 @@ import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 import '../../models/alarm_tone.dart';
 import '../../models/notification_models.dart';
 import '../../models/routine_copy.dart';
+import '../../models/tag_models.dart';
 import '../../models/verification_method.dart';
 import '../../theme/app_colors.dart';
 
@@ -27,9 +28,14 @@ class VerificationOverlay extends StatefulWidget {
     this.supportsSnooze = false,
     this.canSnooze = false,
     this.snoozeLabel,
+    this.isDeveloperMode = false,
+    this.activeTags = const [],
     required this.onSuccess,
     required this.onDismiss,
     this.onSnooze,
+    this.onTagScan,
+    this.onDebugMatchTag,
+    this.onDebugWrongTag,
     this.onFailure,
     this.onCancel,
   });
@@ -42,9 +48,14 @@ class VerificationOverlay extends StatefulWidget {
   final bool supportsSnooze;
   final bool canSnooze;
   final String? snoozeLabel;
+  final bool isDeveloperMode;
+  final List<SavedTag> activeTags;
   final VoidCallback onSuccess;
   final VoidCallback onDismiss;
   final VoidCallback? onSnooze;
+  final Future<TagVerificationResult> Function()? onTagScan;
+  final Future<TagVerificationResult> Function(String? tagId)? onDebugMatchTag;
+  final TagVerificationResult Function()? onDebugWrongTag;
   final ValueChanged<VerificationFailureReason>? onFailure;
   final VoidCallback? onCancel;
 
@@ -57,9 +68,10 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   _OverlayStep _step = _OverlayStep.alarm;
   late final AnimationController _manualController;
   late final SoLoud _soloud;
-  Timer? _scanTimer;
   bool _cameraActive = false;
   bool _isClosing = false;
+  bool _isTagScanInFlight = false;
+  String? _tagStatusLabel;
   bool _alarmSoundActive = false;
   AlarmTone? _alarmSoundTone;
   AudioSource? _alarmSource;
@@ -101,17 +113,17 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   @override
   void dispose() {
     _manualController.dispose();
-    _scanTimer?.cancel();
     _stopAlarmSound();
     _disposeAlarmSource();
     super.dispose();
   }
 
   void _resetForOpen() {
-    _scanTimer?.cancel();
     _manualController.reset();
     _cameraActive = widget.method == VerificationMethod.selfie;
     _isClosing = false;
+    _isTagScanInFlight = false;
+    _tagStatusLabel = null;
     _step = widget.isAlarmMode ? _OverlayStep.alarm : _OverlayStep.verify;
     if (_step == _OverlayStep.verify) {
       _startAutoScanIfNeeded();
@@ -235,12 +247,54 @@ class _VerificationOverlayState extends State<VerificationOverlay>
   }
 
   void _startAutoScanIfNeeded() {
-    _scanTimer?.cancel();
     if (widget.method == VerificationMethod.nfc) {
-      _scanTimer = Timer(const Duration(milliseconds: 2400), () {
-        _completeVerification();
-      });
+      unawaited(_runTagScan());
     }
+  }
+
+  Future<void> _runTagScan() async {
+    if (_isTagScanInFlight || widget.onTagScan == null) return;
+    setState(() {
+      _isTagScanInFlight = true;
+      _tagStatusLabel = _routineCopy.methods.nfcVerify.verifyScanningLabel;
+    });
+
+    final result = await widget.onTagScan!.call();
+    if (!mounted) return;
+    _isTagScanInFlight = false;
+    _consumeTagVerificationResult(result);
+  }
+
+  Future<void> _runDebugMatchTag([String? tagId]) async {
+    if (_isTagScanInFlight || widget.onDebugMatchTag == null) return;
+    setState(() {
+      _isTagScanInFlight = true;
+      _tagStatusLabel = 'Running debug match...';
+    });
+    final result = await widget.onDebugMatchTag!.call(tagId);
+    if (!mounted) return;
+    _isTagScanInFlight = false;
+    _consumeTagVerificationResult(result);
+  }
+
+  void _runDebugWrongTag() {
+    final result =
+        widget.onDebugWrongTag?.call() ?? TagVerificationResult.unrecognized();
+    _consumeTagVerificationResult(result);
+  }
+
+  void _consumeTagVerificationResult(TagVerificationResult result) {
+    if (result.isMatched) {
+      _tagStatusLabel = result.message;
+      _completeVerification();
+      return;
+    }
+
+    _tagStatusLabel = result.message;
+    if (result.failureReason != null) {
+      widget.onFailure?.call(result.failureReason!);
+    }
+    setState(() {});
   }
 
   void _completeVerification() {
@@ -308,13 +362,19 @@ class _VerificationOverlayState extends State<VerificationOverlay>
             SafeArea(
               child: Padding(
                 padding: const EdgeInsets.all(24),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    _buildHeader(isAlarm),
-                    Expanded(child: _buildBody()),
-                    _buildFooter(),
-                  ],
+                child: Align(
+                  alignment: Alignment.topCenter,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(maxWidth: 520),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        _buildHeader(isAlarm),
+                        Expanded(child: _buildBody()),
+                        _buildFooter(),
+                      ],
+                    ),
+                  ),
                 ),
               ),
             ),
@@ -328,13 +388,19 @@ class _VerificationOverlayState extends State<VerificationOverlay>
       child: SafeArea(
         child: Padding(
           padding: const EdgeInsets.all(24),
-          child: Column(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              _buildHeader(isAlarm),
-              Expanded(child: _buildBody()),
-              _buildFooter(),
-            ],
+          child: Align(
+            alignment: Alignment.topCenter,
+            child: ConstrainedBox(
+              constraints: const BoxConstraints(maxWidth: 520),
+              child: Column(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  _buildHeader(isAlarm),
+                  Expanded(child: _buildBody()),
+                  _buildFooter(),
+                ],
+              ),
+            ),
           ),
         ),
       ),
@@ -930,6 +996,7 @@ class _VerificationOverlayState extends State<VerificationOverlay>
         const SizedBox(height: 16),
         Text(
           _routineCopy.verify.title,
+          textAlign: TextAlign.center,
           style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w700),
         ),
         const SizedBox(height: 8),
@@ -999,22 +1066,148 @@ class _VerificationOverlayState extends State<VerificationOverlay>
           ),
         );
       case VerificationMethod.nfc:
-        return Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: [
-            const Icon(Icons.nfc, size: 96, color: AppColors.indigo500),
-            const SizedBox(height: 16),
-            Text(_routineCopy.methods.nfcVerify.verifyScanningLabel),
-            const SizedBox(height: 20),
-            shadcn.Button.ghost(
-              onPressed: _completeVerification,
-              style: const shadcn.ButtonStyle.ghost(
-                size: shadcn.ButtonSize.small,
-                density: shadcn.ButtonDensity.compact,
+        return LayoutBuilder(
+          builder: (context, constraints) {
+            final panelWidth = constraints.maxWidth < 380
+                ? constraints.maxWidth
+                : 380.0;
+            return Align(
+              alignment: Alignment.center,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(maxWidth: panelWidth),
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Container(
+                      width: 132,
+                      height: 132,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: AppColors.indigo500.withValues(alpha: 0.5),
+                          width: 2,
+                        ),
+                        gradient: RadialGradient(
+                          colors: [
+                            AppColors.indigo500.withValues(alpha: 0.32),
+                            AppColors.night900.withValues(alpha: 0.8),
+                          ],
+                        ),
+                      ),
+                      child: _isTagScanInFlight
+                          ? const Padding(
+                              padding: EdgeInsets.all(38),
+                              child: CircularProgressIndicator(strokeWidth: 2.8),
+                            )
+                          : const Icon(
+                              Icons.nfc,
+                              size: 64,
+                              color: AppColors.indigo500,
+                            ),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      _tagStatusLabel ??
+                          _routineCopy.methods.nfcVerify.verifyScanningLabel,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 20),
+                    shadcn.Button.secondary(
+                      onPressed: _isTagScanInFlight ? null : _runTagScan,
+                      style: const shadcn.ButtonStyle.secondary(
+                        size: shadcn.ButtonSize.small,
+                        density: shadcn.ButtonDensity.compact,
+                      ),
+                      child: Text(
+                        _isTagScanInFlight
+                            ? 'Scanning...'
+                            : _routineCopy.methods.nfcVerify.verifySimulateLabel,
+                      ),
+                    ),
+                    if (widget.activeTags.isNotEmpty) ...[
+                      const SizedBox(height: 10),
+                      Text(
+                        'Registered tags: ${widget.activeTags.length}',
+                        style: const TextStyle(
+                          color: AppColors.slate400,
+                          fontSize: 12,
+                        ),
+                      ),
+                    ],
+                    if (widget.isDeveloperMode) ...[
+                      const SizedBox(height: 14),
+                      SizedBox(
+                        width: double.infinity,
+                        child: _buildGlassCard(
+                          child: Padding(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 12,
+                              vertical: 10,
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Developer Debug',
+                                  style: TextStyle(
+                                    fontSize: 11,
+                                    letterSpacing: 1.1,
+                                    color: AppColors.slate400,
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                                const SizedBox(height: 8),
+                                Wrap(
+                                  spacing: 8,
+                                  runSpacing: 8,
+                                  children: [
+                                    shadcn.Button.ghost(
+                                      onPressed: _isTagScanInFlight
+                                          ? null
+                                          : () => unawaited(_runDebugMatchTag()),
+                                      style: const shadcn.ButtonStyle.ghost(
+                                        size: shadcn.ButtonSize.small,
+                                        density: shadcn.ButtonDensity.compact,
+                                      ),
+                                      child: const Text('Mock Match'),
+                                    ),
+                                    shadcn.Button.ghost(
+                                      onPressed: _isTagScanInFlight
+                                          ? null
+                                          : _runDebugWrongTag,
+                                      style: const shadcn.ButtonStyle.ghost(
+                                        size: shadcn.ButtonSize.small,
+                                        density: shadcn.ButtonDensity.compact,
+                                      ),
+                                      child: const Text('Mock Wrong Tag'),
+                                    ),
+                                    for (final tag in widget.activeTags.take(2))
+                                      shadcn.Button.ghost(
+                                        onPressed: _isTagScanInFlight
+                                            ? null
+                                            : () => unawaited(
+                                                _runDebugMatchTag(tag.id),
+                                              ),
+                                        style: const shadcn.ButtonStyle.ghost(
+                                          size: shadcn.ButtonSize.small,
+                                          density: shadcn.ButtonDensity.compact,
+                                        ),
+                                        child: Text('Use ${tag.name}'),
+                                      ),
+                                  ],
+                                ),
+                              ],
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
               ),
-              child: Text(_routineCopy.methods.nfcVerify.verifySimulateLabel),
-            ),
-          ],
+            );
+          },
         );
       case VerificationMethod.selfie:
         return Column(

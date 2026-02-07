@@ -6,7 +6,7 @@ extension VerificationMethodX on VerificationMethod {
       case VerificationMethod.manual:
         return 'Manual';
       case VerificationMethod.nfc:
-        return 'NFC';
+        return 'Tag';
       case VerificationMethod.selfie:
         return 'Selfie';
     }

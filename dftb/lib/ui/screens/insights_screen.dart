@@ -59,7 +59,7 @@ class InsightsScreen extends ConsumerWidget {
                         child: CircularProgressIndicator(strokeWidth: 2),
                       ),
                     ),
-                    error: (_, __) => const Center(
+                    error: (error, stackTrace) => const Center(
                       child: Text(
                         'Unable to load insights.',
                         style: TextStyle(color: AppColors.slate400),

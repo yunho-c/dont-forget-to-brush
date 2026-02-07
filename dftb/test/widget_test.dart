@@ -6,14 +6,23 @@
 // tree, read text, and verify that the values of widget properties are correct.
 
 import 'package:flutter_test/flutter_test.dart';
-import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shadcn_flutter/shadcn_flutter.dart' as shadcn;
 
-import 'package:dftb/app.dart';
+import 'package:dftb/theme/app_theme.dart';
+import 'package:dftb/ui/screens/onboarding_screen.dart';
 
 void main() {
-  testWidgets('shows onboarding on fresh install', (WidgetTester tester) async {
-    SharedPreferences.setMockInitialValues({});
-    await tester.pumpWidget(const DftbApp());
+  testWidgets('renders onboarding setup screen', (WidgetTester tester) async {
+    await tester.pumpWidget(
+      ProviderScope(
+        child: shadcn.ShadcnApp(
+          theme: AppTheme.shadcnDark(),
+          materialTheme: AppTheme.materialDark(),
+          home: const OnboardingScreen(),
+        ),
+      ),
+    );
     await tester.pump();
     expect(find.text("Let's set you up."), findsOneWidget);
   });

@@ -8,9 +8,11 @@ import '../../models/alarm_tone.dart';
 import '../../models/app_mode.dart';
 import '../../models/notification_models.dart';
 import '../../models/routine_copy.dart';
+import '../../models/tag_models.dart';
 import '../../models/verification_method.dart';
 import '../../state/app_state_provider.dart';
 import '../../theme/app_colors.dart';
+import 'tag_registration_screen.dart';
 
 class SettingsScreen extends ConsumerStatefulWidget {
   const SettingsScreen({super.key});
@@ -183,6 +185,83 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
     return '$date $hour:$minute';
   }
 
+  Future<void> _openTagRegistration() async {
+    final state = ref.read(appStateProvider);
+    await Navigator.of(context).push(
+      MaterialPageRoute<void>(
+        builder: (context) =>
+            TagRegistrationScreen(isDeveloperMode: state.isDeveloperMode),
+      ),
+    );
+  }
+
+  Future<void> _renameTagDialog(SavedTag tag) async {
+    final controller = TextEditingController(text: tag.name);
+    final renamed = await showDialog<String>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.night900,
+          title: const Text('Rename Tag'),
+          content: TextField(
+            controller: controller,
+            autofocus: true,
+            decoration: const InputDecoration(hintText: 'Tag name'),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(controller.text.trim()),
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+    controller.dispose();
+
+    if (renamed == null || renamed.isEmpty) return;
+    await ref.read(appStateProvider).renameTag(tagId: tag.id, name: renamed);
+  }
+
+  Future<void> _confirmRemoveTag(SavedTag tag) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          backgroundColor: AppColors.night900,
+          title: const Text('Remove Tag'),
+          content: Text('Remove "${tag.name}" from your tags?'),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              child: const Text('Remove'),
+            ),
+          ],
+        );
+      },
+    );
+    if (confirmed != true) return;
+    await ref.read(appStateProvider).removeTag(tag.id);
+  }
+
+  String _relativeLastUsed(DateTime? time) {
+    if (time == null) return 'Never used';
+    final diff = DateTime.now().difference(time);
+    if (diff.inMinutes < 1) return 'Used just now';
+    if (diff.inHours < 1) return 'Used ${diff.inMinutes}m ago';
+    if (diff.inDays < 1) return 'Used ${diff.inHours}h ago';
+    if (diff.inDays == 1) return 'Used yesterday';
+    return 'Used ${diff.inDays}d ago';
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(appStateProvider);
@@ -312,6 +391,44 @@ class _SettingsScreenState extends ConsumerState<SettingsScreen> {
                   },
                 ),
               ),
+            ],
+          ),
+          const SizedBox(height: 20),
+          _SectionHeader(title: 'Tags'),
+          const SizedBox(height: 12),
+          _SettingsCard(
+            children: [
+              _SettingsRow(
+                icon: Icons.add_circle_outline,
+                label: 'Register New Tag',
+                onTap: _openTagRegistration,
+              ),
+              if (state.tags.isEmpty) ...[
+                const Divider(height: 1, color: AppColors.night700),
+                const Padding(
+                  padding: EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+                  child: Text(
+                    'No tags yet. Add one to require a bathroom scan.',
+                    style: TextStyle(
+                      color: AppColors.slate400,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ] else ...[
+                const Divider(height: 1, color: AppColors.night700),
+                ...state.tags.map(
+                  (tag) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _TagListItem(
+                      tag: tag,
+                      subtitle: _relativeLastUsed(tag.lastUsedAt),
+                      onRename: () => _renameTagDialog(tag),
+                      onDelete: () => _confirmRemoveTag(tag),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
           if (state.isDeveloperMode) ...[
@@ -533,6 +650,108 @@ class _SettingsRow extends StatelessWidget {
     }
 
     return InkWell(onTap: onTap, child: content);
+  }
+}
+
+class _TagListItem extends StatelessWidget {
+  const _TagListItem({
+    required this.tag,
+    required this.subtitle,
+    required this.onRename,
+    required this.onDelete,
+  });
+
+  final SavedTag tag;
+  final String subtitle;
+  final VoidCallback onRename;
+  final VoidCallback onDelete;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      margin: const EdgeInsets.symmetric(horizontal: 2),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(14),
+        color: AppColors.night900.withValues(alpha: 0.65),
+        border: Border.all(color: AppColors.night700),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 32,
+                height: 32,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(10),
+                  color: AppColors.indigo500.withValues(alpha: 0.22),
+                ),
+                child: Icon(
+                  tag.type == TagType.nfc ? Icons.nfc : Icons.qr_code_2,
+                  size: 18,
+                  color: AppColors.indigo500,
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      tag.name,
+                      style: const TextStyle(fontWeight: FontWeight.w700),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${tag.type.label} · ${formatTagCredential(tag.credential)}',
+                      style: const TextStyle(
+                        color: AppColors.slate400,
+                        fontSize: 11,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              IconButton(
+                tooltip: 'Rename tag',
+                visualDensity: VisualDensity.compact,
+                onPressed: onRename,
+                icon: const Icon(
+                  Icons.edit_outlined,
+                  size: 18,
+                  color: AppColors.slate300,
+                ),
+              ),
+              IconButton(
+                tooltip: 'Remove tag',
+                visualDensity: VisualDensity.compact,
+                onPressed: onDelete,
+                icon: const Icon(
+                  Icons.delete_outline,
+                  size: 18,
+                  color: AppColors.red500,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Expanded(
+                child: Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: AppColors.slate400,
+                    fontSize: 11,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
   }
 }
 

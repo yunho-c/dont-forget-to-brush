@@ -140,8 +140,8 @@ class RoutineMethodCopy {
       alarmHint: 'Keep pressure steady until it completes.',
     ),
     nfc: MethodChipCopy(
-      alarmLabel: 'Tap your tag',
-      alarmHint: 'Hold your device near the NFC tag.',
+      alarmLabel: 'Scan your tag',
+      alarmHint: 'Hold your device near your bathroom tag.',
     ),
     selfie: MethodChipCopy(
       alarmLabel: 'Take a selfie',
@@ -149,8 +149,8 @@ class RoutineMethodCopy {
     ),
     manualVerify: ManualVerifyCopy(verifyHoldLabel: 'Hold'),
     nfcVerify: NfcVerifyCopy(
-      verifyScanningLabel: 'Scanning for tag...',
-      verifySimulateLabel: '(Simulate Tap)',
+      verifyScanningLabel: 'Hold near your registered tag',
+      verifySimulateLabel: 'Scan Tag',
     ),
     selfieVerify: SelfieVerifyCopy(
       verifyCameraLabel: 'Simulating Camera...',

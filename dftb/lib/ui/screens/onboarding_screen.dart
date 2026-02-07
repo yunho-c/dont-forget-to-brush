@@ -287,8 +287,8 @@ class _OnboardingScreenState extends ConsumerState<OnboardingScreen> {
         ),
         const SizedBox(height: 12),
         OptionCard(
-          title: 'NFC Tag',
-          subtitle: 'Scan a tag in your bathroom.',
+          title: 'Tag Scan',
+          subtitle: 'Scan a bathroom tag (NFC for now).',
           icon: Icons.nfc,
           isSelected: _method == VerificationMethod.nfc,
           onTap: () => setState(() => _method = VerificationMethod.nfc),

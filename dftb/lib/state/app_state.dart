@@ -7,20 +7,32 @@ import '../models/app_mode.dart';
 import '../models/brush_session.dart';
 import '../models/notification_models.dart';
 import '../models/routine_copy.dart';
+import '../models/tag_models.dart';
 import '../models/user_settings.dart';
 import '../models/verification_method.dart';
 import '../services/notification_repository.dart';
 import '../services/notification_scheduler.dart';
 import '../services/session_repository.dart';
 import '../services/settings_store.dart';
+import '../services/tag_repository.dart';
+import '../services/tag_scanner.dart';
 
 class AppState extends ChangeNotifier {
-  AppState(this._store, this._sessions, this._notifications, this._scheduler);
+  AppState(
+    this._store,
+    this._sessions,
+    this._notifications,
+    this._scheduler,
+    this._tagRepository,
+    this._tagScanner,
+  );
 
   final SettingsStore _store;
   final SessionRepository _sessions;
   final NotificationRepository _notifications;
   final NotificationScheduler _scheduler;
+  final TagRepository _tagRepository;
+  final TagScanner _tagScanner;
 
   UserSettings _settings = UserSettings.defaults();
   bool _isReady = false;
@@ -32,6 +44,7 @@ class AppState extends ChangeNotifier {
   bool _isDeveloperMode = false;
   String? _activeWindowId;
   AlarmState? _alarmState;
+  List<SavedTag> _tags = [];
 
   UserSettings get settings => _settings;
   bool get isReady => _isReady;
@@ -44,6 +57,9 @@ class AppState extends ChangeNotifier {
   RoutinePhase? get routinePhaseOverride => _routinePhaseOverride;
   bool get sleepModeActive => _sleepModeActive;
   bool get isDeveloperMode => _isDeveloperMode;
+  List<SavedTag> get tags => List.unmodifiable(_tags);
+  List<SavedTag> get activeTags => tags;
+  bool get hasActiveTags => tags.isNotEmpty;
 
   bool get isBrushedTonight => _settings.lastBrushDate == _todayKey();
   bool get supportsSnooze => _snoozeConfigFor(_settings.mode) != null;
@@ -69,6 +85,7 @@ class AppState extends ChangeNotifier {
 
   Future<void> load() async {
     _settings = await _store.loadSettings();
+    _tags = await _tagRepository.loadTags();
     _isDeveloperMode = await _store.loadDeveloperMode();
     await _scheduler.initialize(onNotificationTap: _handleNotificationTap);
     _isReady = true;
@@ -249,7 +266,9 @@ class AppState extends ChangeNotifier {
     await _store.clear();
     await _sessions.clearSessions();
     await _notifications.clearAll();
+    await _tagRepository.clear();
     _settings = UserSettings.defaults();
+    _tags = [];
     _isAlarmOpen = false;
     _isAlarmMode = false;
     _activeRoutinePhase = null;
@@ -285,6 +304,156 @@ class AppState extends ChangeNotifier {
 
   Future<void> cancelAllNotifications() async {
     await _scheduler.cancelAll();
+  }
+
+  Future<void> addTag({
+    required TagType type,
+    required String name,
+    required String credential,
+  }) async {
+    final normalized = normalizeTagCredential(credential);
+    if (normalized.isEmpty) return;
+
+    final existingIndex = _tags.indexWhere(
+      (tag) => tag.type == type && tag.credential == normalized,
+    );
+    final resolvedName = name.trim().isEmpty ? _defaultTagName(type) : name;
+
+    if (existingIndex >= 0) {
+      final existing = _tags[existingIndex];
+      _tags[existingIndex] = existing.copyWith(
+        name: resolvedName.trim(),
+        isActive: true,
+      );
+    } else {
+      _tags = [
+        ..._tags,
+        SavedTag(
+          type: type,
+          name: resolvedName.trim(),
+          credential: normalized,
+          isActive: true,
+        ),
+      ];
+    }
+
+    await _persistTags();
+    notifyListeners();
+  }
+
+  Future<void> renameTag({
+    required String tagId,
+    required String name,
+  }) async {
+    final updatedName = name.trim();
+    if (updatedName.isEmpty) return;
+
+    var changed = false;
+    _tags = _tags.map((tag) {
+      if (tag.id != tagId) return tag;
+      changed = true;
+      return tag.copyWith(name: updatedName);
+    }).toList(growable: false);
+
+    if (!changed) return;
+    await _persistTags();
+    notifyListeners();
+  }
+
+  Future<void> removeTag(String tagId) async {
+    final next = _tags.where((tag) => tag.id != tagId).toList(growable: false);
+    if (next.length == _tags.length) return;
+    _tags = next;
+    await _persistTags();
+    notifyListeners();
+  }
+
+  Future<NfcScanResult> scanForTag({
+    Duration timeout = const Duration(seconds: 18),
+  }) async {
+    return _tagScanner.scanNfcTag(timeout: timeout);
+  }
+
+  Future<TagVerificationResult> scanAndVerifyTag() async {
+    if (tags.isEmpty) {
+      return TagVerificationResult.unavailable(
+        message: 'No tags yet. Add one in Settings.',
+      );
+    }
+
+    final scanResult = await scanForTag();
+    switch (scanResult.status) {
+      case NfcScanStatus.found:
+        return verifyScannedTag(scanResult.identifier!);
+      case NfcScanStatus.canceled:
+      case NfcScanStatus.timedOut:
+        return TagVerificationResult.noTagDetected(
+          message: scanResult.message,
+        );
+      case NfcScanStatus.unavailable:
+      case NfcScanStatus.unsupported:
+        return TagVerificationResult.unavailable(
+          message: scanResult.message,
+        );
+      case NfcScanStatus.error:
+        return TagVerificationResult.error(message: scanResult.message);
+    }
+  }
+
+  Future<TagVerificationResult> verifyScannedTag(String identifier) async {
+    final normalized = normalizeTagCredential(identifier);
+    if (normalized.isEmpty) {
+      return TagVerificationResult.noTagDetected();
+    }
+
+    SavedTag? match;
+    for (final tag in _tags) {
+      if (tag.matchesCredential(normalized)) {
+        match = tag;
+        break;
+      }
+    }
+    if (match == null) {
+      return TagVerificationResult.unrecognized(rawIdentifier: normalized);
+    }
+    final matchedTag = match;
+
+    final now = DateTime.now();
+    _tags = _tags.map((tag) {
+      if (tag.id != matchedTag.id) return tag;
+      return tag.copyWith(lastUsedAt: now);
+    }).toList(growable: false);
+    await _persistTags();
+    notifyListeners();
+
+    final refreshed = _tags.firstWhere((tag) => tag.id == matchedTag.id);
+    return TagVerificationResult.matched(
+      tag: refreshed,
+      rawIdentifier: normalized,
+    );
+  }
+
+  Future<TagVerificationResult> debugMatchTag({String? tagId}) async {
+    final pool = tags;
+    if (pool.isEmpty) {
+      return TagVerificationResult.unavailable(
+        message: 'No tags to simulate.',
+      );
+    }
+    final resolved = tagId == null
+        ? pool.first
+        : pool.firstWhere(
+            (tag) => tag.id == tagId,
+            orElse: () => pool.first,
+          );
+    return verifyScannedTag(resolved.credential);
+  }
+
+  TagVerificationResult debugWrongTag() {
+    return TagVerificationResult.unrecognized(
+      rawIdentifier: 'debug_wrong_tag',
+      message: 'Tag not recognized. Scan a registered bathroom tag.',
+    );
   }
 
   Future<void> snoozeAlarm() async {
@@ -326,6 +495,20 @@ class AppState extends ChangeNotifier {
 
   void _persist() {
     _store.saveSettings(_settings);
+  }
+
+  Future<void> _persistTags() {
+    return _tagRepository.saveTags(_tags);
+  }
+
+  String _defaultTagName(TagType type) {
+    final existingCount =
+        _tags.where((tag) => tag.type == type).length + 1;
+    final prefix = switch (type) {
+      TagType.nfc => 'Bathroom Tag',
+      TagType.qr => 'QR Tag',
+    };
+    return '$prefix $existingCount';
   }
 
   Future<void> _refreshSchedule() async {
@@ -517,10 +700,6 @@ class AppState extends ChangeNotifier {
         '${now.day.toString().padLeft(2, '0')}';
   }
 
-  @override
-  void dispose() {
-    super.dispose();
-  }
 }
 
 class _BedtimeWindow {

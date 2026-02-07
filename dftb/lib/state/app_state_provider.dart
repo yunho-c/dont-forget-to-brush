@@ -7,6 +7,8 @@ import '../services/notification_repository.dart';
 import '../services/notification_scheduler.dart';
 import '../services/session_repository.dart';
 import '../services/settings_store.dart';
+import '../services/tag_repository.dart';
+import '../services/tag_scanner.dart';
 import 'app_state.dart';
 
 final settingsStoreProvider = Provider<SettingsStore>((ref) {
@@ -29,12 +31,22 @@ final notificationSchedulerProvider = Provider<NotificationScheduler>((ref) {
   return NotificationScheduler();
 });
 
+final tagRepositoryProvider = Provider<TagRepository>((ref) {
+  return TagRepository();
+});
+
+final tagScannerProvider = Provider<TagScanner>((ref) {
+  return TagScanner();
+});
+
 final appStateProvider = ChangeNotifierProvider<AppState>((ref) {
   final state = AppState(
     ref.read(settingsStoreProvider),
     ref.read(sessionRepositoryProvider),
     ref.read(notificationRepositoryProvider),
     ref.read(notificationSchedulerProvider),
+    ref.read(tagRepositoryProvider),
+    ref.read(tagScannerProvider),
   );
   state.load();
   ref.onDispose(state.dispose);
