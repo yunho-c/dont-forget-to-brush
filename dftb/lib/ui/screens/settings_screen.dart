@@ -597,14 +597,15 @@ class _SelectField<T> extends StatelessWidget {
       filled: true,
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       borderRadius: BorderRadius.circular(12),
-      popupConstraints: const BoxConstraints(minWidth: 140),
-      popup: (context) => shadcn.SelectPopup(
+      popupWidthConstraint: shadcn.PopoverConstraint.intrinsic,
+      popupConstraints: const BoxConstraints(minWidth: 110, maxWidth: 320),
+      popup: (context) => shadcn.SelectPopup.noVirtualization(
         items: shadcn.SelectItemList(
           children: items
               .map(
-                (item) => shadcn.SelectItem(
+                (item) => shadcn.SelectItemButton<T>(
                   value: item,
-                  builder: (context) => Padding(
+                  child: Padding(
                     padding: const EdgeInsets.symmetric(
                       horizontal: 12,
                       vertical: 8,
